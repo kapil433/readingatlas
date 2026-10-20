@@ -33,6 +33,7 @@ All layouts, scripts, and collection data are embedded in the single HTML file. 
 
 ## Features
 
+- A top-bar light/dark theme toggle across all nine shelves and deeper author guides. Light is the default; your choice is saved in this browser separately from reading progress and restored on reload. It also works in the downloaded offline edition.
 - Nine responsive shelves with search and collection-specific filters for country, period, language, genre, form, or prize.
 - Chronological science fiction browsing and 250 compact novels and novellas.
 - 100 contemporary selections spanning 2000–2026, with period and reading-route filters, publication or reading-edition years, separate award dates, translator credits, and source links.
