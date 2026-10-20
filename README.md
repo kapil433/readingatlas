@@ -36,12 +36,28 @@ All layouts, scripts, and collection data are embedded in the single HTML file. 
 - Nine responsive shelves with search and collection-specific filters for country, period, language, genre, form, or prize.
 - Chronological science fiction browsing and 250 compact novels and novellas.
 - 100 contemporary selections spanning 2000–2026, with period and reading-route filters, publication or reading-edition years, separate award dates, translator credits, and source links.
-- Fifty author paths with starting works, suggested sequences, and practical scope notes; the author shelf opens without grouping.
+- Fifty author paths with **328 individually checkable reading tasks** and a dedicated **Deeper reading guide** in place of the author shelf's old edition-search button.
+- Five sections in every author guide: **Reading route**, **Editions & translations**, **Life & context**, **Companions**, and **Criticism**. Guides include a shorter first route, suggested sequence, edition trade-offs, historical influences, biographical starting points, supplementary material, source links, and spoiler cautions.
+- Author-card and guide checklists stay synchronized, with per-author and overall progress, incomplete-checklist filtering, and search by recommended book title.
 - Essays, poems, and stories grouped by form, country, period, or theme.
 - Browser-local saved/read tracking and reading-list backup controls on applicable shelves.
 - Keyboard navigation between the main tabs.
 
 Tracking belongs to the browser and origin where the file is opened. Local files and the hosted site have separate browser storage. Collections use their own storage keys and backup formats; use the relevant export controls before changing devices or browsers.
+
+## Using the author guides
+
+Open [50 author reading paths](https://kapil433.github.io/readingatlas/#authors), then select **Deeper reading guide** beside an author. This opens an internal guide view with section tabs, not a separate external website. **Back to authors** (or Escape) returns to the shelf. Guide tabs support arrow keys, Home, and End. Direct guide links also work, for example [Homer](https://kapil433.github.io/readingatlas/#authors/homer).
+
+Check individual titles on either the author card or its guide. The 328 tasks include individual works, specified collections, selections, and labelled optional extensions; some overlap. They are not 328 unique books or additions to the atlas's 1,412 shelf entries. A checklist is complete when all its listed tasks, including optional extensions, are checked; the shorter first route offers a smaller starting goal.
+
+Previous saved paths and old **route completed** marks are retained. An old route-completion mark does **not** automatically mark the new individual books as read. Author checklist progress is separate from read marks on other shelves.
+
+Use **Back up or restore progress** in a guide, or expand **Selection notes, dates, sources & reading-list backup** on the shelf. **Export new-shelves list** downloads `reading-atlas-reading-progress.json`, including individual author-book checks and saved/read marks for the expanded shelves. Import accepts the existing `reading-atlas-expanded-v1` backup format. Import merges supplied entries; an older backup without book-level data preserves existing individual checks. A supplied `false` book value restores that task as unchecked. The earlier collections keep their own backup controls and formats.
+
+Progress is browser-local, not account-synced. Export before clearing browser data or moving to another device. Guide text and checklists remain available offline; external editions, archives, criticism, and companion resources need internet access or a separate legal copy.
+
+Author-guide bibliographic sources were checked on **20 October 2026**. Edition choices are purpose-based recommendations, not a universal ranking of the “best” translation. Compare samples, completeness, notes, and the named translator/editor. Reprints and availability vary. The reading order, context summaries, and discussion questions are original editorial guidance; linked publisher, library, archive, and scholarly resources provide starting points for deeper study.
 
 ## Publication years, prizes, and sources
 
@@ -66,3 +82,4 @@ GitHub automatically runs its Pages build and deployment process after updates. 
 This is a reading guide with bibliographic entries and original reading notes. It does not include the complete texts of the recommended copyrighted books, essays, poems, or stories.
 
 Curated for Kapil Gupta.
+
