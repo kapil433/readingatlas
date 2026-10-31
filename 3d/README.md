@@ -34,3 +34,13 @@ node --test tests/*.test.mjs
 The tests cover source completeness, exact source-group membership, stable identities under reordering, aliases and duplicate diagnostics, all original reading-progress mappings, malformed/blocked storage preservation, and obstacle-aware routes. The source fixture used locally is deliberately not committed; repository tests read the original root `index.html`.
 
 Implementation browser checks covered desktop and a 390 × 844 viewport, country navigation, physical book selection, subject search, result pagination beyond 80, author guide content, saved desk, globe-to-country travel and cross-floor route continuation. Rendering quality is adjustable; device-specific frame-rate targets have not been certified across a hardware matrix.
+
+## Living library
+
+Six floor-specific environments combine original procedural architecture with third-party 3D assets. `asset-manifest.json` records sources, creators, licenses and transformations. Asset files are bundled with the site; model failures keep the catalogue and navigation usable.
+
+The fictional librarian offers four explicit discovery choices. Five editorial journeys link exact existing catalogue records and display a reason for every stop. Journey position is separate from completed-reading progress; reaching a stop never marks a book read. Visitors can leave and resume a journey.
+
+Private notes and journey position use a new versioned browser-local memory store. Saving a blank note removes that entry's note. The reading desk can export notes, saved book IDs plus readable titles, and journey position as JSON. Original Atlas completion is maintained separately and is not included in this export. Deleting notes requires a second click and leaves saved books and reading completion intact. No account or cross-device sync is implied. Corrupt or blocked storage produces a visible error instead of overwriting existing data.
+
+Animated visitors are fictional. Ambient motion respects reduced-motion preference and can be disabled in the help dialog. Opening a 3D book presents catalogue context, not a full-text edition.

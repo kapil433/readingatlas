@@ -1,3 +1,5 @@
+import { buildJourneys } from './journeys.js';
+import { loadMemory, saveNote, saveJourney, clearNotes, exportReaderMemory } from './reader-memory.js';
 import { loadCatalogue, resolveCover, getCoverInfo, COLLECTION_NAMES as names } from './catalogue.js';
 import { buildAtlas, FLOORS, searchText } from './classification.js';
 import { createLibraryWorld } from './world.js';
@@ -86,7 +88,7 @@ function showBook(b){
  $('#save-book').textContent=desk.includes(b.uid)?'Remove from reading desk':'+ Add to reading desk';$('#original-link').href=b.originalHref||`../index.html#${b.collection}`;
  $('#author-guide').innerHTML=guide?`<h3>Your reading journey · ${(guide.books||[]).length} works</h3>${guide.approach?`<p>${esc(guide.approach)}</p>`:''}${guide.context?`<p>${esc(guide.context)}</p>`:''}${s.entry?`<p>Begin with: ${esc(s.entry)}</p>`:''}<ol>${(guide.books||[]).map((task,i)=>{const p=getTaskProgress(b,task);return `<li><label><input type="checkbox" data-task="${i}" ${p.done?'checked':''} ${p.supported?'':'disabled'}><span><strong>${esc(task.title)}</strong><small>${esc(task.stage||'')}${task.focus?` · ${esc(task.focus)}`:''}</small></span></label></li>`;}).join('')}</ol>`:'';
  $('#related-books').innerHTML=`<h3>Continue exploring</h3>${related(b).map(x=>`<button type="button" data-book="${esc(x.book.uid)}"><strong>${esc(x.book.title)}</strong><small>${esc(x.reason)}</small></button>`).join('')}`;
- drawProgress(b);$('#detail').showModal();world?.inspectBook?.(b.uid,0);setHash({floor:b.floor,book:b.uid});
+ drawProgress(b);showNote(b);bookOpen=false;$('#open-book').textContent='Open book';$('#open-book').setAttribute('aria-pressed','false');$('#detail').showModal();world?.inspectBook?.(b.uid,0);setHash({floor:b.floor,book:b.uid});
  resolveCover(b,b.collection).then(id=>{if(!id||generation!==detailGeneration||!$('#detail').open)return;const img=new Image();img.alt=`${b.title} — matched edition cover`;img.onload=()=>{if(generation===detailGeneration&&$('#detail').open)$('#detail-cover').append(img);};img.onerror=()=>{if(generation===detailGeneration)$('#detail-extra').textContent+=' · Cover image unavailable';};img.src=`https://covers.openlibrary.org/b/id/${id}-M.jpg?default=false`;if(getCoverInfo(b,b.collection).status==='matched')$('#detail-extra').textContent+=' · Cover: Open Library; edition may vary.';}).catch(()=>{});
 }
 function travelBook(uid,routeOnly=false){
@@ -101,6 +103,7 @@ function travelBook(uid,routeOnly=false){
 function persistDesk(next){const r=saveDesk(next);if(!r.ok){notify(r.error||'Your browser could not save the reading desk.');return false;}desk=next;return true;}
 function toggleDesk(uid){if(!atlas.bookById.has(uid))return;const saved=desk.includes(uid);if(!persistDesk(saved?desk.filter(x=>x!==uid):[...desk,uid]))return;notify(saved?'Removed from your reading desk.':'Added to your reading desk. Saved on this browser.');if(selectedBook?.uid===uid)$('#save-book').textContent=saved?'+ Add to reading desk':'Remove from reading desk';if($('#search-dialog').open)drawSearch(false);if($('#desk-dialog').open)drawDesk();}
 function drawDesk(){
+ const memory=loadMemory();$('#desk-memory').textContent=memory.error||`${Object.keys(memory.notes).length} private notes saved in this browser. Export a copy to keep them.`;
  const books=desk.map(uid=>atlas.bookById.get(uid)).filter(Boolean),unknown=desk.length-books.length,stored=getDeskStatus();
  $('#desk-status').textContent=`${books.length} entries · saved on this browser.${unknown?` ${unknown} saved entries are not in the current catalogue.`:''}${stored?.error?` ${stored.error}`:''}`;
  $('#desk-list').innerHTML=books.map((b,i)=>`<article class="desk-item"><span class="desk-number">${String(i+1).padStart(2,'0')}</span><button type="button" data-book="${esc(b.uid)}"><strong>${esc(b.title)}</strong><small>${esc(b.author)} · ${esc(b.groupLabel)}</small></button><div class="card-actions"><button type="button" data-travel="${esc(b.uid)}">Find shelf</button><button type="button" data-desk-move="${esc(b.uid)}" data-direction="-1" aria-label="Move ${esc(b.title)} earlier" ${i===0?'disabled':''}>↑</button><button type="button" data-desk-move="${esc(b.uid)}" data-direction="1" aria-label="Move ${esc(b.title)} later" ${i===books.length-1?'disabled':''}>↓</button><button type="button" data-save="${esc(b.uid)}" aria-label="Remove ${esc(b.title)}">×</button></div></article>`).join('')||'<p class="empty">Your next chapter starts here. Open any book and add it to your reading desk.</p>';
@@ -148,18 +151,52 @@ $('#detail').addEventListener('close',()=>{if($('#detail').open)return;detailGen
 window.addEventListener('hashchange',restoreHash);window.addEventListener('storage',()=>{desk=loadDesk();if(atlas&&$('#desk-dialog').open)drawDesk();if(selectedBook&&$('#detail').open)drawProgress(selectedBook);});
 window.addEventListener('pagehide',e=>{if(e.persisted)return;clearInterval(mapTimer);world?.dispose();globe?.dispose();});
 
+// Curated human-scale discovery, backed by the unchanged catalogue.
+let journeys=[],activeJourney=null,bookOpen=false,notesDeleteArmed=false;
+function openLibrarian(){if(!atlas)return;openDialog('#librarian-dialog');}
+function openJourneys(){if(!atlas)return;drawJourneys();openDialog('#journeys-dialog');}
+function drawJourneys(){
+ $('#journey-list').innerHTML=journeys.map(j=>`<button class="journey-card" data-journey="${esc(j.id)}"><span class="journey-kicker">A READING JOURNEY · ${j.stops.length} STOPS</span><strong>${esc(j.title)}</strong><p>${esc(j.description)}</p><span>Explore this journey ↗</span></button>`).join('')||'<p>These journeys are being revised. All books remain available in the catalogue.</p>';
+}
+function showJourney(id){const j=journeys.find(x=>x.id===id);if(!j)return;
+ $('#journey-detail').innerHTML=`<div class="journey-kicker">CURATED FROM YOUR ATLAS</div><h3>${esc(j.title)}</h3><p>${esc(j.description)}</p><ol class="journey-stops">${j.stops.map((s,i)=>{const b=atlas.bookById.get(s.uid);return `<li><button data-book="${esc(s.uid)}"><strong>${esc(b.title)}</strong><small>${esc(b.author)} · ${esc(b.groupLabel)}</small></button><p>${esc(s.reason)}</p></li>`;}).join('')}</ol><button class="button primary" data-start-journey="${esc(j.id)}">Begin this journey ↗</button>`;
+ $('#journey-detail').scrollIntoView({block:'nearest',behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'instant':'smooth'});
+}
+function drawJourneyProgress(){const j=journeys.find(x=>x.id===activeJourney?.id);$('#journey-progress').hidden=!j;document.body.classList.toggle('on-journey',!!j);if(!j)return;
+ const i=Math.min(Math.max(0,activeJourney.index),j.stops.length-1),b=atlas.bookById.get(j.stops[i].uid);activeJourney.index=i;
+ $('#journey-status').textContent=`${j.title} · ${i+1} / ${j.stops.length} · ${b.title}`;$('#journey-next').textContent=i===j.stops.length-1?'Finish journey ✓':'Next stop →';
+}
+function visitJourneyStop(){const j=journeys.find(x=>x.id===activeJourney?.id);if(!j)return;const s=j.stops[activeJourney.index];travelBook(s.uid);drawJourneyProgress();notify(s.reason);}
+function beginJourney(id){const j=journeys.find(x=>x.id===id);if(!j)return;const r=saveJourney({id,index:0});activeJourney={id,index:0};visitJourneyStop();if(!r.ok)notify(r.error+' This journey remains available until you leave.');}
+function finishJourney(){const r=saveJourney(null);activeJourney=null;drawJourneyProgress();notify(r.ok?'Journey finished. Your saved books and notes remain at your reading desk.':r.error);}
+function showNote(b){const memory=loadMemory();$('#reading-note').value=memory.notes[b.uid]||'';$('#note-status').textContent=memory.error|| (memory.notes[b.uid]?'Your private note · saved in this browser.':'A thought, a question, a reason to return. Notes stay in this browser.');}
+function persistNote(){if(!selectedBook)return;const r=saveNote(selectedBook.uid,$('#reading-note').value);$('#note-status').textContent=r.ok?'Saved in this browser. Export your reading desk to keep a copy.':r.error;}
+async function openCredits(){openDialog('#credits-dialog');try{const r=await fetch('./asset-manifest.json');if(!r.ok)throw Error();const m=await r.json();$('#asset-credits').innerHTML=(m.assets||[]).map(a=>{const source=typeof a.source==='string'&&/^https:\/\//.test(a.source)?a.source:null;return `<article><strong>${esc(a.name||a.id)}</strong><p>${esc(a.creator||'')} · ${esc(a.license||'See source')}</p>${source?`<a href="${esc(source)}" target="_blank" rel="noopener noreferrer">View original asset ↗</a>`:''}${a.modifications?`<p>${esc(a.modifications)}</p>`:''}</article>`;}).join('')+'<p>Library architecture and editorial journeys: Reading Atlas. Covers: Open Library, where verified. Visitor figures are fictional.</p>';}catch{$('#asset-credits').textContent='Asset credits could not load. See 3d/asset-manifest.json in the Reading Atlas repository.';}}
+$('#ask-librarian').addEventListener('click',openLibrarian);$('#open-journeys').addEventListener('click',openJourneys);$('#open-credits').addEventListener('click',openCredits);
+$('#journey-resume').addEventListener('click',visitJourneyStop);
+$('#journey-next').addEventListener('click',()=>{const j=journeys.find(x=>x.id===activeJourney?.id);if(!j)return;if(activeJourney.index+1>=j.stops.length){finishJourney();return;}activeJourney={...activeJourney,index:activeJourney.index+1};const r=saveJourney(activeJourney);visitJourneyStop();if(!r.ok)notify(r.error);});
+$('#journey-stop').addEventListener('click',()=>{const r=saveJourney(null);activeJourney=null;drawJourneyProgress();notify(r.ok?'Journey closed. Your reading desk is unchanged.':r.error);});
+$('#reading-note').addEventListener('input',()=>{$('#note-status').textContent='Unsaved note — choose Save note before leaving this book.';});$('#save-note').addEventListener('click',persistNote);
+$('#open-book').addEventListener('click',()=>{bookOpen=!bookOpen;world?.setBookOpen?.(bookOpen);$('#open-book').textContent=bookOpen?'Close book':'Open book';$('#open-book').setAttribute('aria-pressed',String(bookOpen));});
+$('#atmosphere-motion').addEventListener('change',()=>world?.setAtmosphereMotion?.($('#atmosphere-motion').checked));
+$('#export-desk').addEventListener('click',()=>{const memory=loadMemory();if(memory.error){$('#desk-memory').textContent=memory.error+' Export stopped to avoid an incomplete backup.';return;}const url=URL.createObjectURL(new Blob([JSON.stringify({...JSON.parse(exportReaderMemory(desk)),books:desk.map(uid=>atlas.bookById.get(uid)).filter(Boolean).map(b=>({uid:b.uid,title:b.title,author:b.author,section:b.groupLabel}))},null,2)],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='reading-atlas-desk.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$('#desk-memory').textContent='Exported your saved book IDs, private notes and journey position. Original Atlas reading completion is managed separately.';});
+$('#clear-notes').addEventListener('click',()=>{if(!notesDeleteArmed){notesDeleteArmed=true;$('#clear-notes').textContent='Confirm: delete all private notes';$('#desk-memory').textContent='Export first if you want a copy. Click again to delete private notes only.';return;}const r=clearNotes();notesDeleteArmed=false;$('#clear-notes').textContent='Delete private notes';$('#desk-memory').textContent=r.ok?'Private notes deleted. Saved books and reading completion are unchanged.':r.error;});
+$('#desk-dialog').addEventListener('close',()=>{notesDeleteArmed=false;$('#clear-notes').textContent='Delete private notes';});
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||!atlas)return;if(b.dataset.journey)showJourney(b.dataset.journey);else if(b.dataset.startJourney)beginJourney(b.dataset.startJourney);else if(b.dataset.concierge){const choice=b.dataset.concierge;if(choice==='place')openMap();else if(choice==='idea')openJourneys();else if(choice==='short')openSearch('shortforms');else if(choice==='surprise'){const pool=atlas.books.filter(x=>x.collection!=='authors'&&!desk.includes(x.uid)),book=pool[Math.floor(Math.random()*pool.length)]||atlas.books[0];showBook(book);notify('An unexpected shelf from your existing catalogue.');}}});
+
 async function start(){
  try{
   atlas=await buildAtlas(await loadCatalogue());atlas.books.forEach(b=>searchIndex.set(b.uid,`${searchText(b)} ${(b.guide?.books||[]).map(t=>t.title).join(' ')}`.toLocaleLowerCase()));
   if(atlas.report.classifiedTotal!==atlas.report.sourceTotal||atlas.report.duplicateUIDs.length||atlas.report.duplicateSlots?.length)throw Error('Catalogue integrity check failed. Please use the original Atlas.');
-  drawFloors();drawCollections();drawGroups();prepareSearch();drawMapDirectory();drawLocation();
+  drawFloors();drawCollections();drawGroups();prepareSearch();drawMapDirectory();drawLocation();try{journeys=buildJourneys(atlas)}catch(e){console.warn('Curated journeys unavailable',e);journeys=[];}const saved=loadMemory().journey;activeJourney=saved&&journeys.some(j=>j.id===saved.id)?saved:null;drawJourneyProgress();
  }catch(error){$('#load').hidden=true;$('#failure').hidden=false;$('#failure').innerHTML=`Unable to open the catalogue. ${esc(error.message)} <a href="../index.html">Open the original Atlas ↗</a>`;return;}
  try{
   world=await createLibraryWorld({canvas:$('#scene'),atlas,resolveCover,onBookSelect:showBook,onGroupSelect:focusGroup,
    onFloorChange:(index,options)=>{syncFloor(index);if(!options?.viaStairs&&!options?.guided)world?.enterFloor(index);setHash({floor:index});if(pendingRoute)queueMicrotask(resumeRoute);},
    onLocationChange:({floor,groupId})=>{if(floor!==currentFloor)syncFloor(floor,groupId);else if(groupId!==currentGroup){currentGroup=groupId||null;const g=atlas.groupById.get(groupId);if(g&&g.collection!==currentCollection){currentCollection=g.collection;drawCollections();}drawGroups();drawLocation();}},
+   onLibrarian:openLibrarian,onJourney:openJourneys,
    onOverview:()=>{overview=true;drawFloors();drawLocation();},onMapSelect:openMap,onDesk:()=>{drawDesk();openDialog('#desk-dialog');},onLift:()=>openDialog('#lift-dialog'),onHover:text=>{$('#hover-hint').textContent=text||'';}
-  });mapTimer=setInterval(drawMinimap,500);
+  });$('#atmosphere-motion').checked=!matchMedia('(prefers-reduced-motion:reduce)').matches;world.setAtmosphereMotion?.($('#atmosphere-motion').checked);mapTimer=setInterval(drawMinimap,500);
  }catch(error){console.error('3D renderer unavailable',error);$('#failure').hidden=false;$('#failure').textContent='The 3D view is unavailable. Every book remains accessible through the directory, search and reading desk.';document.body.classList.add('no-webgl');$('#quality').disabled=true;$('#lighting').disabled=true;}
  $('#load').hidden=true;restoreHash();notify(`${atlas.report.classifiedTotal.toLocaleString()} entries · ${atlas.groups.length} sections · all six floors ready.`);
 }
