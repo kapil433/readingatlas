@@ -37,7 +37,7 @@ Implementation browser checks covered desktop and a 390 × 844 viewport, country
 
 ## Living library
 
-Six floor-specific environments combine original procedural architecture with third-party 3D assets. `asset-manifest.json` records sources, creators, licenses and transformations. Asset files are bundled with the site; model failures keep the catalogue and navigation usable.
+Six floor-specific environments combine original procedural architecture with third-party 3D assets. `asset-manifest.json` records sources, creators, licenses and transformations. Model delivery is recorded in the manifest. External model failures keep the catalogue and navigation usable through built-in scenery fallbacks.
 
 The fictional librarian offers four explicit discovery choices. Five editorial journeys link exact existing catalogue records and display a reason for every stop. Journey position is separate from completed-reading progress; reaching a stop never marks a book read. Visitors can leave and resume a journey.
 
