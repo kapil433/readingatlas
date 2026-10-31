@@ -16,14 +16,16 @@ function textOf(record){const source=record.source||{};return [record.title,reco
 function getResults(key,query=''){const q=query.trim().toLocaleLowerCase();return(collections[key]||[]).filter(record=>!q||textOf(record).includes(q))}
 function getShelfEntries(index,key){const active=index===currentFloor&&key===currentCollection;const list=active?results:getResults(key);const page=active?currentPage:0;return list.slice(page*pageSize,(page+1)*pageSize)}
 function drawNav(){
+ const focused=document.activeElement?.closest?.('[data-floor]')?.dataset.floor;
  $('#floors').innerHTML=FLOORS.map(f=>`<button class="floor" type="button" data-floor="${f.id}" aria-current="${!isOverview&&f.id===currentFloor}"><span class="floor-num">${f.number}</span><span><strong>${escapeHTML(f.name)}</strong><small>${f.sections.map(x=>escapeHTML(names[x])).join(' · ')}</small></span></button>`).join('');
  $('#floors').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>enterFloor(Number(b.dataset.floor))));
+ if(focused!==undefined)$('#floors').querySelector(`[data-floor="${focused}"]`)?.focus();
 }
 function drawControls(){
- const f=FLOORS[currentFloor];
+ const f=FLOORS[currentFloor];const focused=document.activeElement?.closest?.('[data-key]')?.dataset.key;
  if(!isOverview){$('#floor-kicker').textContent='THE READING ATLAS · '+f.tag;$('#floor-title').textContent=f.name;$('#floor-description').textContent=f.sections.map(k=>names[k]).join(' · ');$('#mode-hint').textContent=f.tag+' / '+f.name.toUpperCase()}
  $('#sections').innerHTML=f.sections.map(k=>`<button class="section" type="button" data-key="${k}" aria-pressed="${k===currentCollection}">${escapeHTML(names[k])} · ${(collections[k]||[]).length}</button>`).join('');
- $('#sections').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>selectSection(b.dataset.key)));
+ $('#sections').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>selectSection(b.dataset.key)));if(focused)$('#sections').querySelector(`[data-key="${focused}"]`)?.focus();
  results=getResults(currentCollection,$('#search').value);const max=Math.max(1,Math.ceil(results.length/pageSize));currentPage=Math.max(0,Math.min(currentPage,max-1));
  $('#result').textContent=`${results.length} entries · shelf ${currentPage+1} of ${max}`;$('#prev').disabled=currentPage===0;$('#next').disabled=currentPage>=max-1;world?.updateFloor(currentFloor);
 }
@@ -47,6 +49,7 @@ $('#overview').addEventListener('click',buildingView);$('#enter').addEventListen
 $('#search').addEventListener('input',()=>{currentPage=0;if(isOverview){isOverview=false;world?.enterFloor(currentFloor);drawNav()}drawControls()});
 $('#prev').addEventListener('click',()=>{currentPage--;drawControls()});$('#next').addEventListener('click',()=>{currentPage++;drawControls()});$('#browse').addEventListener('click',showList);
 document.querySelectorAll('dialog .close').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));document.querySelectorAll('[data-walk]').forEach(b=>b.addEventListener('click',()=>{if(isOverview)enterFloor(currentFloor);world?.walk(b.dataset.walk)}));
+new ResizeObserver(entries=>{const height=entries[0]?.contentRect?.height;if(height)document.querySelector('.viewport').style.setProperty('--panel-height',`${Math.ceil(height+30)}px`)}).observe(document.querySelector('.panel'));
 (async()=>{
  drawNav();
  try{const loaded=await loadCatalogue();collections=loaded.collections;drawControls()}catch(error){console.error('Catalogue error',error);$('#load').hidden=true;$('#failure').hidden=false;$('#failure').innerHTML='The catalogue could not load. <a href="../index.html">Open the original Reading Atlas</a>.';return}
