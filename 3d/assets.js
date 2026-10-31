@@ -1,5 +1,6 @@
 // Licensed, commit-pinned external figures. Static room geometry remains usable if the CDN fails.
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 
 const CHARACTER = 'https://cdn.jsdelivr.net/gh/KenneyNL/Starter-Kit-3D-Platformer@3fa8a04b1c01ab23db43123d4ce814a34c3fc7f0/models/character.glb';
@@ -9,7 +10,7 @@ const furniturePromises=new Map(),loadedRoles=new Set();
 function markLoaded(role){loadedRoles.add(role);const canvas=document.querySelector('#scene');if(canvas)canvas.dataset.loadedAssets=[...loadedRoles].join(' ');}
 async function loadModel(url){
  const raw=url.replace('https://cdn.jsdelivr.net/gh/','https://raw.githubusercontent.com/').replace('@','/');let failure;
- for(const source of [url,raw]){try{const response=await fetch(source,{signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error(`Model request ${response.status}`);return await new GLTFLoader().parseAsync(await response.arrayBuffer(),source.slice(0,source.lastIndexOf('/')+1));}catch(error){failure=error;}}
+ for(const source of [url,raw]){try{const response=await fetch(source,{signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error(`Model request ${response.status}`);return await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(await response.arrayBuffer(),source.slice(0,source.lastIndexOf('/')+1));}catch(error){failure=error;}}
  throw failure;
 }
 function furniture(file){if(!furniturePromises.has(file))furniturePromises.set(file,loadModel(FURNITURE_BASE+file));return furniturePromises.get(file);}
