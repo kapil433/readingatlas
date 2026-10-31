@@ -9,6 +9,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 let atlas, world, currentFloor=0, currentCollection='world', currentGroup=null, overview=true;
 let selectedBook=null, selectedAngle=0, resultLimit=40, desk=loadDesk(), detailGeneration=0, mapTimer, hashGuard=false, pendingRoute=null, globe=null;
 const searchIndex=new Map();
+const mobileFloors=document.createElement('nav');mobileFloors.className='mobile-floor-labels';mobileFloors.setAttribute('aria-label','Six floors in the building');mobileFloors.innerHTML=[...FLOORS].reverse().map(f=>`<button type="button" data-floor="${f.id}"><span>${f.number}</span>${esc(f.name)}</button>`).join('');$('.viewport').append(mobileFloors);
 function notify(text){$('#status').textContent=text;}
 function address(b){const a=world?.getAddress?.(b.uid),slot=b.slot??0;return `${FLOORS[b.floor].number} · ${FLOORS[b.floor].name} / ${b.groupLabel} / Bay ${a?.bay??Math.floor(slot/24)+1} · Book ${slot%24+1}`;}
 function setHash(params){const value=new URLSearchParams(params).toString();if(location.hash.slice(1)!==value)history.replaceState(null,'',`#${value}`);}
@@ -133,6 +134,8 @@ $('#collections').addEventListener('change',()=>{currentCollection=$('#collectio
 $('#group-query').addEventListener('input',drawGroups);$('#global-search').addEventListener('click',()=>openSearch());$('#browse').addEventListener('click',()=>openSearch(currentCollection,currentGroup||''));
 $('#global-query').addEventListener('input',()=>drawSearch());$('#search-collection').addEventListener('change',()=>{updateSearchGroups();drawSearch();});['group','country','kind','period'].forEach(f=>$(`#search-${f}`).addEventListener('change',()=>drawSearch()));$('#search-more').addEventListener('click',()=>{resultLimit+=40;drawSearch(false);});
 $('#map-open').addEventListener('click',openMap);$('#map-query').addEventListener('input',drawMapDirectory);$('#map-dialog').addEventListener('close',()=>{if(!$('#map-dialog').open)globe?.hide?.();});
+$('#section-info').addEventListener('click',()=>{const g=atlas?.groupById.get(currentGroup);$('#section-title').textContent=g?g.label:FLOORS[currentFloor].name;$('#section-intro').textContent=g?(g.intro||`${g.books.length} entries in ${names[g.collection]}. Each book has a permanent shelf position.`):`Choose one of the named sections in this floor’s directory to explore its collection. ${FLOORS[currentFloor].sections.map(k=>names[k]).join(' · ')}`;openDialog('#section-dialog');});
+$('#section-browse').addEventListener('click',()=>openSearch(currentCollection,currentGroup||''));
 $('#desk-open').addEventListener('click',()=>{if(!atlas)return;drawDesk();openDialog('#desk-dialog');});$('#lift-open').addEventListener('click',()=>openDialog('#lift-dialog'));$('#help-open').addEventListener('click',()=>openDialog('#help-dialog'));
 $('#directory-toggle').addEventListener('click',()=>{const open=document.body.classList.toggle('directory-open');$('#directory-toggle').setAttribute('aria-expanded',String(open));});
 $('#lighting').addEventListener('change',()=>world?.setLighting($('#lighting').value));$('#quality').addEventListener('change',()=>world?.setQuality($('#quality').value));
