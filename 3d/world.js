@@ -94,7 +94,7 @@ export async function createLibraryWorld({canvas,atlas,resolveCover,onBookSelect
      blockers.push({x1:cx-.73,x2:cx+.73,z1:bz-2.78,z2:bz+2.78});
      for(const b of books){const slot=Number.isInteger(b.slot)?b.slot:g.books.indexOf(b),local=slot%SLOTS,row=Math.floor(local/12),column=local%12,bookX=cx-side*.62,bookZ=bz+(column-5.5)*.42,bookY=1.45+row*1.65;const location={uid:b.uid,floor:i,groupId:g.id,gallery:lane.gallery,bay:bay+1,row:row+1,slot:column+1,x:bookX,z:bookZ,approachX:lane.x,approachZ:bookZ,side,book:b};address.set(b.uid,location);bookSpecs.push(location)}
      spineSpecs.push({x:cx-side*1.01,z:bz,rotation,side,books,mesh:null});
-     const lead=books[0];if(lead){const display=new T.Mesh(new T.PlaneGeometry(.76,1.08),new T.MeshStandardMaterial({color:0xffffff,map:fallback(lead),side:T.DoubleSide}));display.position.set(faceX-side*.02,3.8,bz);display.rotation.y=rotation;display.userData.action=()=>{inspectBook(lead.uid,0);onBookSelect?.(lead)};room.add(display);coverSpecs.push({mesh:display,book:lead,group:g,loaded:false,pending:false,token:0});}
+     const lead=books[0];if(lead){const display=new T.Mesh(new T.PlaneGeometry(.76,1.08),new T.MeshStandardMaterial({color:0xffffff,map:fallback(lead),side:T.DoubleSide}));display.position.set(faceX-side*.5,4.1,bz);display.rotation.y=rotation;display.userData.action=()=>{inspectBook(lead.uid,0);onBookSelect?.(lead)};room.add(display);coverSpecs.push({mesh:display,book:lead,group:g,loaded:false,pending:false,token:0});}
     }
    });
   }
