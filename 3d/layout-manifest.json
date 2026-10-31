@@ -1,0 +1,1041 @@
+{
+  "version": 1,
+  "capacityPerGroup": 96,
+  "groups": {
+    "world:afg": {
+      "floor": 0,
+      "laneX": 0,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "World Fiction",
+      "part": 1,
+      "order": 0
+    },
+    "world:arg": {
+      "floor": 0,
+      "laneX": 0,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "World Fiction",
+      "part": 1,
+      "order": 1
+    },
+    "world:aus": {
+      "floor": 0,
+      "laneX": 0,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "World Fiction",
+      "part": 1,
+      "order": 2
+    },
+    "world:bih": {
+      "floor": 0,
+      "laneX": 0,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "World Fiction",
+      "part": 1,
+      "order": 3
+    },
+    "world:bra": {
+      "floor": 0,
+      "laneX": 0,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "World Fiction",
+      "part": 1,
+      "order": 4
+    },
+    "world:can": {
+      "floor": 0,
+      "laneX": 0,
+      "row": 5,
+      "baseZ": -72,
+      "gallery": "World Fiction",
+      "part": 1,
+      "order": 5
+    },
+    "world:chl": {
+      "floor": 0,
+      "laneX": 0,
+      "row": 6,
+      "baseZ": -84,
+      "gallery": "World Fiction",
+      "part": 1,
+      "order": 6
+    },
+    "world:chn": {
+      "floor": 0,
+      "laneX": 0,
+      "row": 7,
+      "baseZ": -96,
+      "gallery": "World Fiction",
+      "part": 1,
+      "order": 7
+    },
+    "world:col": {
+      "floor": 0,
+      "laneX": 16,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "World Fiction",
+      "part": 2,
+      "order": 8
+    },
+    "world:cub": {
+      "floor": 0,
+      "laneX": 16,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "World Fiction",
+      "part": 2,
+      "order": 9
+    },
+    "world:cze": {
+      "floor": 0,
+      "laneX": 16,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "World Fiction",
+      "part": 2,
+      "order": 10
+    },
+    "world:drc": {
+      "floor": 0,
+      "laneX": 16,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "World Fiction",
+      "part": 2,
+      "order": 11
+    },
+    "world:egy": {
+      "floor": 0,
+      "laneX": 16,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "World Fiction",
+      "part": 2,
+      "order": 12
+    },
+    "world:eth": {
+      "floor": 0,
+      "laneX": 16,
+      "row": 5,
+      "baseZ": -72,
+      "gallery": "World Fiction",
+      "part": 2,
+      "order": 13
+    },
+    "world:fra": {
+      "floor": 0,
+      "laneX": 16,
+      "row": 6,
+      "baseZ": -84,
+      "gallery": "World Fiction",
+      "part": 2,
+      "order": 14
+    },
+    "world:ger": {
+      "floor": 0,
+      "laneX": 16,
+      "row": 7,
+      "baseZ": -96,
+      "gallery": "World Fiction",
+      "part": 2,
+      "order": 15
+    },
+    "world:gre": {
+      "floor": 0,
+      "laneX": -16,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "World Fiction",
+      "part": 3,
+      "order": 16
+    },
+    "world:hti": {
+      "floor": 0,
+      "laneX": -16,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "World Fiction",
+      "part": 3,
+      "order": 17
+    },
+    "world:hun": {
+      "floor": 0,
+      "laneX": -16,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "World Fiction",
+      "part": 3,
+      "order": 18
+    },
+    "world:ind": {
+      "floor": 0,
+      "laneX": -16,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "World Fiction",
+      "part": 3,
+      "order": 19
+    },
+    "world:idn": {
+      "floor": 0,
+      "laneX": -16,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "World Fiction",
+      "part": 3,
+      "order": 20
+    },
+    "world:irn": {
+      "floor": 0,
+      "laneX": -16,
+      "row": 5,
+      "baseZ": -72,
+      "gallery": "World Fiction",
+      "part": 3,
+      "order": 21
+    },
+    "world:irq": {
+      "floor": 0,
+      "laneX": -16,
+      "row": 6,
+      "baseZ": -84,
+      "gallery": "World Fiction",
+      "part": 3,
+      "order": 22
+    },
+    "world:ita": {
+      "floor": 0,
+      "laneX": -16,
+      "row": 7,
+      "baseZ": -96,
+      "gallery": "World Fiction",
+      "part": 3,
+      "order": 23
+    },
+    "world:jpn": {
+      "floor": 0,
+      "laneX": 32,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "World Fiction",
+      "part": 4,
+      "order": 24
+    },
+    "world:ken": {
+      "floor": 0,
+      "laneX": 32,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "World Fiction",
+      "part": 4,
+      "order": 25
+    },
+    "world:lby": {
+      "floor": 0,
+      "laneX": 32,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "World Fiction",
+      "part": 4,
+      "order": 26
+    },
+    "world:mex": {
+      "floor": 0,
+      "laneX": 32,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "World Fiction",
+      "part": 4,
+      "order": 27
+    },
+    "world:mar": {
+      "floor": 0,
+      "laneX": 32,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "World Fiction",
+      "part": 4,
+      "order": 28
+    },
+    "world:mmr": {
+      "floor": 0,
+      "laneX": 32,
+      "row": 5,
+      "baseZ": -72,
+      "gallery": "World Fiction",
+      "part": 4,
+      "order": 29
+    },
+    "world:nga": {
+      "floor": 0,
+      "laneX": 32,
+      "row": 6,
+      "baseZ": -84,
+      "gallery": "World Fiction",
+      "part": 4,
+      "order": 30
+    },
+    "world:prk": {
+      "floor": 0,
+      "laneX": 32,
+      "row": 7,
+      "baseZ": -96,
+      "gallery": "World Fiction",
+      "part": 4,
+      "order": 31
+    },
+    "world:pak": {
+      "floor": 0,
+      "laneX": -32,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "World Fiction",
+      "part": 5,
+      "order": 32
+    },
+    "world:pal-isr": {
+      "floor": 0,
+      "laneX": -32,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "World Fiction",
+      "part": 5,
+      "order": 33
+    },
+    "world:pol": {
+      "floor": 0,
+      "laneX": -32,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "World Fiction",
+      "part": 5,
+      "order": 34
+    },
+    "world:por": {
+      "floor": 0,
+      "laneX": -32,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "World Fiction",
+      "part": 5,
+      "order": 35
+    },
+    "world:rus": {
+      "floor": 0,
+      "laneX": -32,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "World Fiction",
+      "part": 5,
+      "order": 36
+    },
+    "world:rwa": {
+      "floor": 0,
+      "laneX": -32,
+      "row": 5,
+      "baseZ": -72,
+      "gallery": "World Fiction",
+      "part": 5,
+      "order": 37
+    },
+    "world:scan": {
+      "floor": 0,
+      "laneX": -32,
+      "row": 6,
+      "baseZ": -84,
+      "gallery": "World Fiction",
+      "part": 5,
+      "order": 38
+    },
+    "world:som": {
+      "floor": 0,
+      "laneX": -32,
+      "row": 7,
+      "baseZ": -96,
+      "gallery": "World Fiction",
+      "part": 5,
+      "order": 39
+    },
+    "world:zaf": {
+      "floor": 0,
+      "laneX": 48,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "World Fiction",
+      "part": 6,
+      "order": 40
+    },
+    "world:esp": {
+      "floor": 0,
+      "laneX": 48,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "World Fiction",
+      "part": 6,
+      "order": 41
+    },
+    "world:sdn": {
+      "floor": 0,
+      "laneX": 48,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "World Fiction",
+      "part": 6,
+      "order": 42
+    },
+    "world:syr": {
+      "floor": 0,
+      "laneX": 48,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "World Fiction",
+      "part": 6,
+      "order": 43
+    },
+    "world:tur": {
+      "floor": 0,
+      "laneX": 48,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "World Fiction",
+      "part": 6,
+      "order": 44
+    },
+    "world:ukr": {
+      "floor": 0,
+      "laneX": 48,
+      "row": 5,
+      "baseZ": -72,
+      "gallery": "World Fiction",
+      "part": 6,
+      "order": 45
+    },
+    "world:uk": {
+      "floor": 0,
+      "laneX": 48,
+      "row": 6,
+      "baseZ": -84,
+      "gallery": "World Fiction",
+      "part": 6,
+      "order": 46
+    },
+    "world:usa": {
+      "floor": 0,
+      "laneX": 48,
+      "row": 7,
+      "baseZ": -96,
+      "gallery": "World Fiction",
+      "part": 6,
+      "order": 47
+    },
+    "world:ven": {
+      "floor": 0,
+      "laneX": -48,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "World Fiction",
+      "part": 7,
+      "order": 48
+    },
+    "world:yem": {
+      "floor": 0,
+      "laneX": -48,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "World Fiction",
+      "part": 7,
+      "order": 49
+    },
+    "india:asm": {
+      "floor": 0,
+      "laneX": 64,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Indian Languages",
+      "part": 1,
+      "order": 50
+    },
+    "india:ben": {
+      "floor": 0,
+      "laneX": 64,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Indian Languages",
+      "part": 1,
+      "order": 51
+    },
+    "india:eng": {
+      "floor": 0,
+      "laneX": 64,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "Indian Languages",
+      "part": 1,
+      "order": 52
+    },
+    "india:guj": {
+      "floor": 0,
+      "laneX": 64,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "Indian Languages",
+      "part": 1,
+      "order": 53
+    },
+    "india:hin": {
+      "floor": 0,
+      "laneX": 64,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "Indian Languages",
+      "part": 1,
+      "order": 54
+    },
+    "india:kan": {
+      "floor": 0,
+      "laneX": 64,
+      "row": 5,
+      "baseZ": -72,
+      "gallery": "Indian Languages",
+      "part": 1,
+      "order": 55
+    },
+    "india:kon": {
+      "floor": 0,
+      "laneX": 64,
+      "row": 6,
+      "baseZ": -84,
+      "gallery": "Indian Languages",
+      "part": 1,
+      "order": 56
+    },
+    "india:mai": {
+      "floor": 0,
+      "laneX": 64,
+      "row": 7,
+      "baseZ": -96,
+      "gallery": "Indian Languages",
+      "part": 1,
+      "order": 57
+    },
+    "india:mal": {
+      "floor": 0,
+      "laneX": -64,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Indian Languages",
+      "part": 2,
+      "order": 58
+    },
+    "india:mar": {
+      "floor": 0,
+      "laneX": -64,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Indian Languages",
+      "part": 2,
+      "order": 59
+    },
+    "india:odi": {
+      "floor": 0,
+      "laneX": -64,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "Indian Languages",
+      "part": 2,
+      "order": 60
+    },
+    "india:pun": {
+      "floor": 0,
+      "laneX": -64,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "Indian Languages",
+      "part": 2,
+      "order": 61
+    },
+    "india:tam": {
+      "floor": 0,
+      "laneX": -64,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "Indian Languages",
+      "part": 2,
+      "order": 62
+    },
+    "india:tel": {
+      "floor": 0,
+      "laneX": -64,
+      "row": 5,
+      "baseZ": -72,
+      "gallery": "Indian Languages",
+      "part": 2,
+      "order": 63
+    },
+    "india:urd": {
+      "floor": 0,
+      "laneX": -64,
+      "row": 6,
+      "baseZ": -84,
+      "gallery": "Indian Languages",
+      "part": 2,
+      "order": 64
+    },
+    "nonfiction:ai": {
+      "floor": 1,
+      "laneX": 0,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Mathematics & Computing",
+      "part": 1,
+      "order": 65
+    },
+    "nonfiction:cplx": {
+      "floor": 1,
+      "laneX": 0,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Mathematics & Computing",
+      "part": 1,
+      "order": 66
+    },
+    "nonfiction:cs": {
+      "floor": 1,
+      "laneX": 0,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "Mathematics & Computing",
+      "part": 1,
+      "order": 67
+    },
+    "nonfiction:math": {
+      "floor": 1,
+      "laneX": 0,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "Mathematics & Computing",
+      "part": 1,
+      "order": 68
+    },
+    "nonfiction:bio": {
+      "floor": 1,
+      "laneX": 16,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Nature & the Physical World",
+      "part": 1,
+      "order": 69
+    },
+    "nonfiction:earth": {
+      "floor": 1,
+      "laneX": 16,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Nature & the Physical World",
+      "part": 1,
+      "order": 70
+    },
+    "nonfiction:phys": {
+      "floor": 1,
+      "laneX": 16,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "Nature & the Physical World",
+      "part": 1,
+      "order": 71
+    },
+    "nonfiction:lang": {
+      "floor": 1,
+      "laneX": -16,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Mind, Language & Philosophy",
+      "part": 1,
+      "order": 72
+    },
+    "nonfiction:nond": {
+      "floor": 1,
+      "laneX": -16,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Mind, Language & Philosophy",
+      "part": 1,
+      "order": 73
+    },
+    "nonfiction:phil": {
+      "floor": 1,
+      "laneX": -16,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "Mind, Language & Philosophy",
+      "part": 1,
+      "order": 74
+    },
+    "nonfiction:mind": {
+      "floor": 1,
+      "laneX": -16,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "Mind, Language & Philosophy",
+      "part": 1,
+      "order": 75
+    },
+    "nonfiction:anth": {
+      "floor": 1,
+      "laneX": 32,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "People, History & Power",
+      "part": 1,
+      "order": 76
+    },
+    "nonfiction:econ": {
+      "floor": 1,
+      "laneX": 32,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "People, History & Power",
+      "part": 1,
+      "order": 77
+    },
+    "nonfiction:glob": {
+      "floor": 1,
+      "laneX": 32,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "People, History & Power",
+      "part": 1,
+      "order": 78
+    },
+    "nonfiction:hist": {
+      "floor": 1,
+      "laneX": 32,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "People, History & Power",
+      "part": 1,
+      "order": 79
+    },
+    "nonfiction:ind": {
+      "floor": 1,
+      "laneX": 32,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "People, History & Power",
+      "part": 1,
+      "order": 80
+    },
+    "nonfiction:pol": {
+      "floor": 1,
+      "laneX": 32,
+      "row": 5,
+      "baseZ": -72,
+      "gallery": "People, History & Power",
+      "part": 1,
+      "order": 81
+    },
+    "nonfiction:arch": {
+      "floor": 1,
+      "laneX": -32,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Making, Art & Organisations",
+      "part": 1,
+      "order": 82
+    },
+    "nonfiction:media": {
+      "floor": 1,
+      "laneX": -32,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Making, Art & Organisations",
+      "part": 1,
+      "order": 83
+    },
+    "nonfiction:prod": {
+      "floor": 1,
+      "laneX": -32,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "Making, Art & Organisations",
+      "part": 1,
+      "order": 84
+    },
+    "nonfiction:music": {
+      "floor": 1,
+      "laneX": -32,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "Making, Art & Organisations",
+      "part": 1,
+      "order": 85
+    },
+    "nonfiction:write": {
+      "floor": 1,
+      "laneX": -32,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "Making, Art & Organisations",
+      "part": 1,
+      "order": 86
+    },
+    "science:before-1900": {
+      "floor": 2,
+      "laneX": 0,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Science Fiction",
+      "part": 1,
+      "order": 87
+    },
+    "science:1900-1945": {
+      "floor": 2,
+      "laneX": 0,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Science Fiction",
+      "part": 1,
+      "order": 88
+    },
+    "science:1946-1989": {
+      "floor": 2,
+      "laneX": 0,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "Science Fiction",
+      "part": 1,
+      "order": 89
+    },
+    "science:1990-2009": {
+      "floor": 2,
+      "laneX": 0,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "Science Fiction",
+      "part": 1,
+      "order": 90
+    },
+    "science:2010-onwards": {
+      "floor": 2,
+      "laneX": 0,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "Science Fiction",
+      "part": 1,
+      "order": 91
+    },
+    "forgotten:before-1900": {
+      "floor": 2,
+      "laneX": 16,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Rediscovered",
+      "part": 1,
+      "order": 92
+    },
+    "forgotten:1900-1945": {
+      "floor": 2,
+      "laneX": 16,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Rediscovered",
+      "part": 1,
+      "order": 93
+    },
+    "forgotten:1946-1989": {
+      "floor": 2,
+      "laneX": 16,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "Rediscovered",
+      "part": 1,
+      "order": 94
+    },
+    "novellas:before-1900": {
+      "floor": 3,
+      "laneX": 0,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Short Novels",
+      "part": 1,
+      "order": 95
+    },
+    "novellas:1900-1945": {
+      "floor": 3,
+      "laneX": 0,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Short Novels",
+      "part": 1,
+      "order": 96
+    },
+    "novellas:1946-1989": {
+      "floor": 3,
+      "laneX": 0,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "Short Novels",
+      "part": 1,
+      "order": 97
+    },
+    "novellas:1990-2009": {
+      "floor": 3,
+      "laneX": 0,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "Short Novels",
+      "part": 1,
+      "order": 98
+    },
+    "novellas:2010-onwards": {
+      "floor": 3,
+      "laneX": 0,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "Short Novels",
+      "part": 1,
+      "order": 99
+    },
+    "shortforms:essay": {
+      "floor": 3,
+      "laneX": 16,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Essays, Poems & Stories",
+      "part": 1,
+      "order": 100
+    },
+    "shortforms:poem": {
+      "floor": 3,
+      "laneX": 16,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Essays, Poems & Stories",
+      "part": 1,
+      "order": 101
+    },
+    "shortforms:short-story": {
+      "floor": 3,
+      "laneX": 16,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "Essays, Poems & Stories",
+      "part": 1,
+      "order": 102
+    },
+    "contemporary:2000-2023-earlier-50": {
+      "floor": 4,
+      "laneX": 0,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Contemporary",
+      "part": 1,
+      "order": 103
+    },
+    "contemporary:2024-2026-recent-50": {
+      "floor": 4,
+      "laneX": 0,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Contemporary",
+      "part": 1,
+      "order": 104
+    },
+    "authors:ancient": {
+      "floor": 5,
+      "laneX": 0,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Authors’ Observatory",
+      "part": 1,
+      "order": 105
+    },
+    "authors:classical": {
+      "floor": 5,
+      "laneX": 0,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Authors’ Observatory",
+      "part": 1,
+      "order": 106
+    },
+    "authors:medieval": {
+      "floor": 5,
+      "laneX": 0,
+      "row": 2,
+      "baseZ": -36,
+      "gallery": "Authors’ Observatory",
+      "part": 1,
+      "order": 107
+    },
+    "authors:renaissance": {
+      "floor": 5,
+      "laneX": 0,
+      "row": 3,
+      "baseZ": -48,
+      "gallery": "Authors’ Observatory",
+      "part": 1,
+      "order": 108
+    },
+    "authors:18th-19th-centuries": {
+      "floor": 5,
+      "laneX": 0,
+      "row": 4,
+      "baseZ": -60,
+      "gallery": "Authors’ Observatory",
+      "part": 1,
+      "order": 109
+    },
+    "authors:19th-century": {
+      "floor": 5,
+      "laneX": 0,
+      "row": 5,
+      "baseZ": -72,
+      "gallery": "Authors’ Observatory",
+      "part": 1,
+      "order": 110
+    },
+    "authors:19th-20th-centuries": {
+      "floor": 5,
+      "laneX": 0,
+      "row": 6,
+      "baseZ": -84,
+      "gallery": "Authors’ Observatory",
+      "part": 1,
+      "order": 111
+    },
+    "authors:modernist": {
+      "floor": 5,
+      "laneX": 0,
+      "row": 7,
+      "baseZ": -96,
+      "gallery": "Authors’ Observatory",
+      "part": 1,
+      "order": 112
+    },
+    "authors:20th-century": {
+      "floor": 5,
+      "laneX": 16,
+      "row": 0,
+      "baseZ": -12,
+      "gallery": "Authors’ Observatory",
+      "part": 2,
+      "order": 113
+    },
+    "authors:20th-21st-centuries": {
+      "floor": 5,
+      "laneX": 16,
+      "row": 1,
+      "baseZ": -24,
+      "gallery": "Authors’ Observatory",
+      "part": 2,
+      "order": 114
+    }
+  }
+}

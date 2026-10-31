@@ -1,145 +1,162 @@
-// Six-storey Reading Atlas world. UI, catalogue state and cover lookup live outside this module.
-// createLibraryWorld({canvas,floors,names,getShelfEntries,resolveCover,onBookSelect,onFloorChange,onSectionSelect})
-// -> {enterFloor(index),overview(),updateFloor(index),focusSection(key),walk(direction),dispose()}
-export async function createLibraryWorld({canvas,floors,names,getShelfEntries,resolveCover,onBookSelect,onFloorChange,onSectionSelect}) {
-  const T=await import('https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js');
-  const renderer=new T.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
-  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5)); renderer.outputColorSpace=T.SRGBColorSpace;
-  renderer.toneMapping=T.ACESFilmicToneMapping; renderer.toneMappingExposure=1.2;
-  const scene=new T.Scene(),camera=new T.PerspectiveCamera(63,1,.1,240);
-  scene.background=new T.Color(0x1f2b28); scene.fog=new T.Fog(0x1f2b28,85,190);
-  const h=7.6, rooms=[],gen=Array(floors.length).fill(0),texLoader=new T.TextureLoader();
-  texLoader.setCrossOrigin('anonymous');
-  scene.add(new T.HemisphereLight(0xfaf1d8,0x3c453a,2.2));
-  // Gentle ambient fill keeps downward-facing ceiling surfaces readable indoors.
-  scene.add(new T.AmbientLight(0xffe5c2,.65));
-  const sun=new T.DirectionalLight(0xffdfad,2.1); sun.position.set(17,55,24);scene.add(sun);
-  const material=(color,roughness=1)=>new T.MeshStandardMaterial({color,roughness});
-  const walnut=material(0x59412d), darkWood=material(0x342820), paleStone=material(0xa69a80), ceilingMaterial=material(0xc5b69d), lampMaterial=new T.MeshStandardMaterial({color:0xffe2b2,emissive:0xe6ac62,emissiveIntensity:.5}), brass=material(0xb89e67,.45), paper=material(0xe2d6bc), glass=new T.MeshStandardMaterial({color:0x86aca9,transparent:true,opacity:.20,roughness:.25});
-  const sharedBookGeo=new T.BoxGeometry(1.02,1.25,.18),sharedFaceGeo=new T.PlaneGeometry(.985,1.22);
-  function box(parent,w,height,d,x,y,z,mat){const m=new T.Mesh(new T.BoxGeometry(w,height,d),mat);m.position.set(x,y,z);parent.add(m);return m;}
-  function label(text,sub='',bg='#233b31',w=1024,height=256){const c=document.createElement('canvas');c.width=w;c.height=height;const x=c.getContext('2d');x.fillStyle=bg;x.fillRect(0,0,w,height);x.strokeStyle='#ceb786';x.lineWidth=4;x.strokeRect(8,8,w-16,height-16);x.fillStyle='#f2e8d4';x.textAlign='center';x.font=`${Math.round(height*.29)}px Georgia`;x.fillText(text,w/2,height*.48,w*.91);if(sub){x.fillStyle='#dcc69a';x.font=`600 ${Math.round(height*.12)}px sans-serif`;x.fillText(sub.toUpperCase(),w/2,height*.72,w*.9)}const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;}
-  function sign(parent,text,sub,x,y,z,w,height,click){const m=new T.Mesh(new T.PlaneGeometry(w,height),new T.MeshStandardMaterial({map:label(text,sub),side:T.DoubleSide}));m.position.set(x,y,z);if(click)m.userData.action=click;parent.add(m);return m;}
-  function bookFallback(b){const c=document.createElement('canvas');c.width=256;c.height=384;let x=c.getContext('2d');x.fillStyle=['#554b46','#4f6055','#644840','#4a5664','#746047'][(b.title.length||0)%5];x.fillRect(0,0,256,384);x.strokeStyle='#d8c5a0';x.lineWidth=3;x.strokeRect(12,12,232,360);x.fillStyle='#e8dbc1';x.font='12px sans-serif';x.fillText('THE READING ATLAS',25,43);x.font='25px Georgia';let line='',y=105;for(const word of (b.title||'Untitled').split(' ')){const next=line?line+' '+word:word;if(x.measureText(next).width>205&&line){x.fillText(line,25,y);y+=29;line=word;if(y>255)break}else line=next}if(y<=255)x.fillText(line,25,y);x.font='15px sans-serif';x.fillText((b.author||'').slice(0,27),25,333);const texture=new T.CanvasTexture(c);texture.colorSpace=T.SRGBColorSpace;return texture;}
-  function setMap(face,texture){if(face.material.map)face.material.map.dispose();face.material.map=texture;face.material.needsUpdate=true;}
-  // An open frontage makes all six stacked storeys visible in the exterior building view.
-  box(scene,27,1,23,0,-.5,0,paleStone); box(scene,24,.65,21,0,h*floors.length+.25,0,paleStone);
-  for(const x of [-11.5,11.5]){box(scene,.8,h*floors.length+.5,.8,x,h*floors.length/2,9.4,paleStone);box(scene,.8,h*floors.length+.5,.8,x,h*floors.length/2,-9.4,paleStone)}
-  sign(scene,'THE READING ATLAS','A SIX STOREY LIBRARY',0,h*floors.length+1.25,9.7,14,1.4);
-  for(let i=0;i<floors.length;i++){
-    const f=floors[i],room=new T.Group();room.position.y=i*h;scene.add(room);
-    const wood=material(f.colors?.[0]??0x514133),wall=material(f.colors?.[1]??0x626553),rug=material(f.colors?.[2]??0x978467);
-    // Each floor is an independent walkable space, physically stacked in the same scene.
-    // Leave a stairwell opening through each storey so the stair flights actually connect the stacked levels.
-    function splitSlab(y,depth,mat){box(room,19.7,depth,19.5,-1.65,y,0,mat);box(room,.8,depth,19.5,11.1,y,0,mat);box(room,2.5,depth,7.75,9.45,y,-5.875,mat);box(room,2.5,depth,4.05,9.45,y,7.725,mat)}
-    if(i===0)box(room,23,.4,19.5,0,0,0,paleStone);else splitSlab(0,.4,paleStone);
-    if(i===floors.length-1)box(room,23,.28,19.5,0,7.25,0,ceilingMaterial);else splitSlab(7.25,.28,ceilingMaterial);
-    box(room,22.7,7,.38,0,3.6,-9.5,wall);box(room,.38,7,19.5,-11.3,3.6,0,wall);box(room,.38,7,19.5,11.3,3.6,0,wall);
-    // Ceiling beams and pendant fixtures make the upper interior legible as architecture.
-    for(const z of [-5,0,5])box(room,20.2,.18,.22,-1.3,7.03,z,walnut);
-    for(const x of [-5,4])for(const z of [-4,4]){box(room,.08,.42,.08,x,6.82,z,brass);box(room,.95,.13,.95,x,6.57,z,lampMaterial)}
-    box(room,10,.08,9,0,.23,3.4,rug);
-    for(const x of [-10.8,0,10.8])box(room,.48,7,.48,x,3.65,9.2,paleStone);
-    box(room,22,.25,.5,0,7.05,9.2,walnut);
-    // Shallow side windows and columns make the rooms legible as rooms, not a flat background.
-    for(const x of [-11.08,11.08])for(const z of [-5.7,0,5.7]){box(room,.08,3.6,3,x,4.1,z,glass);box(room,.16,.13,3.25,x,5.95,z,brass);box(room,.16,.13,3.25,x,2.25,z,brass)}
-    box(room,3.3,.20,1.5,0,1.1,3.2,walnut);for(const x of [-1.35,1.35])for(const z of [2.65,3.75])box(room,.14,1,.14,x,.57,z,darkWood);
-    box(room,.14,1.2,.14,0,1.8,3.2,brass);box(room,.75,.18,.75,0,2.4,3.2,brass);box(room,.9,.1,.7,-.8,1.26,3.15,paper);
-    const colliders=[{x1:-2.05,x2:2.05,z1:2.1,z2:4.25}];
-    // A traversable staircase and clearly marked lift/landing portals connect the floors.
-    box(room,2.1,4.15,.22,-9.55,2.2,-8.9,darkWood);box(room,1.75,3.8,.22,-9.55,2.05,-8.75,brass);
-    const interactive=[];
-    const lift=sign(room,'LIFT','SELECT FLOOR IN DIRECTORY',-9.55,4.55,-8.58,2.1,.45,()=>onFloorChange?.((i+1)%floors.length));interactive.push(lift);
-    for(let step=0;step<20;step++){const ascending=(step+1)*h/20;box(room,2,.24,.38,9.45,ascending,5.15-step*.36,wood);}
-    for(let step=0;step<10;step++){const y=(step*2+1)*h/20;box(room,.10,.8,.10,8.4,y+.5,5.15-step*.72,brass);box(room,.10,.8,.10,10.5,y+.5,5.15-step*.72,brass)}
-    // The rail is handled by walking logic; the stairwell is traversable at either landing.
-    const stairUp=sign(room,i<floors.length-1?'↑  NEXT FLOOR':'←  GROUND FLOOR','USE STAIRS / LIFT',9.55,3.65,-.30,2.45,.7,()=>onFloorChange?.(i<floors.length-1?i+1:0));interactive.push(stairUp);
-    if(i>0){const stairDown=sign(room,'↓  FLOOR BELOW','CHANGE STOREY',9.55,2.75,-.29,2.45,.52,()=>onFloorChange?.(i-1));interactive.push(stairDown)}
-    const slots=[],sectionPositions={};
-    if(f.sections.length===2){
-      // Two real reading bays: a low physical divider and named entrances.
-      box(room,.22,1.18,6.6,0,.82,-3.6,wood);
-      box(room,.32,.12,6.7,0,1.47,-3.6,brass);
-      colliders.push({x1:-.33,x2:.33,z1:-7,z2:-.2});
-      for(let section=0;section<2;section++){
-        const cx=section===0?-5.3:5.3,key=f.sections[section];
-        for(const side of [-1,1]){
-          const x=cx+side*4.1;box(room,.22,4.5,.24,x,2.47,-2.85,walnut);
-          colliders.push({x1:x-.18,x2:x+.18,z1:-3.07,z2:-2.63});
-        }
-        box(room,8.4,.20,.28,cx,4.72,-2.85,walnut);
-        const entrance=sign(room,names[key]||key,'ENTER THIS SECTION',cx,5.18,-2.70,6.5,.65,()=>onSectionSelect?.(key));interactive.push(entrance);
-      }
-    }
-    const width=f.sections.length===1?13:8.3;
-    for(let section=0;section<f.sections.length;section++){
-      const key=f.sections[section],cx=f.sections.length===1?0:(section===0?-5.3:5.3),shelf=new T.Group();shelf.position.set(cx,0,-7.9);room.add(shelf);
-      box(shelf,width,5.7,.45,0,2.95,0,darkWood);box(shelf,.22,5.9,1.2,-width/2,3,.35,walnut);box(shelf,.22,5.9,1.2,width/2,3,.35,walnut);
-      for(let row=0;row<3;row++)box(shelf,width,.15,1.2,0,.72+row*1.60,.45,walnut);
-      const sectionSign=sign(shelf,names[key]||key,'12 BOOKS PER SHELF PAGE',0,6.35,.6,width-.5,.7,()=>onSectionSelect?.(key));interactive.push(sectionSign);
-      const display=[];
-      for(let n=0;n<12;n++){
-        const row=Math.floor(n/4),col=n%4,x=(col-1.5)*Math.min(1.55,(width-1.1)/4),y=1.43+row*1.6,book=new T.Group();book.position.set(x,y,.82);shelf.add(book);
-        const body=new T.Mesh(sharedBookGeo,wood);book.add(body);
-        const face=new T.Mesh(sharedFaceGeo,new T.MeshStandardMaterial({color:0xffffff,roughness:1}));face.position.z=.10;book.add(face);
-        display.push({book,body,face}); interactive.push(face,body);
-      }
-      slots.push({key,display});sectionPositions[key]={x:cx,z:-3.0};
-      colliders.push({x1:cx-width/2-.3,x2:cx+width/2+.3,z1:-8.8,z2:-6.75});
-    }
-    rooms.push({room,slots,interactive,colliders,sectionPositions});
+// Reading Atlas spatial world: persisted groups and book slots are never paged in place.
+import { findRoute } from './routes.js';
+export async function createLibraryWorld({canvas,atlas,resolveCover,onBookSelect,onGroupSelect,onFloorChange,onLocationChange,onOverview,onMapSelect,onDesk,onLift,onHover}) {
+ const T=await import('https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js');
+ const renderer=new T.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+ renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.22;
+ const scene=new T.Scene(),camera=new T.PerspectiveCamera(66,1,.1,450);scene.background=new T.Color(0x202b29);scene.fog=new T.Fog(0x202b29,95,280);scene.add(camera);
+ const hemi=new T.HemisphereLight(0xffedcf,0x596557,2.25),ambient=new T.AmbientLight(0xffe2be,.62),sun=new T.DirectionalLight(0xffe0af,1.7);sun.position.set(20,80,45);scene.add(hemi,ambient,sun);
+ const H=7.6,ROWS=8,BAYS=4,SLOTS=24,ROWSTEP=12,LANEGAP=16;const floors=atlas.floors,rooms=[],address=new Map(),locByGroup=new Map(),laneAssignments=[];let sceneBounds=null;
+ for(const g of atlas.groups)for(const b of g.books)if(Number.isInteger(b.slot)&&(b.slot<0||b.slot>=96))throw Error(`Group ${g.id} requires a layout capacity migration for slot ${b.slot}`);
+ const allGroups=atlas.groups.slice().sort((a,b)=>(a.order??0)-(b.order??0)||a.id.localeCompare(b.id));
+ // Checked-in coordinates reserve old bays even if a source group disappears.
+ const layoutResponse=await fetch(new URL('./layout-manifest.json',import.meta.url));
+ if(!layoutResponse.ok)throw Error('The permanent library layout manifest could not be loaded.');
+ const layoutManifest=await layoutResponse.json();if(layoutManifest.version!==1||layoutManifest.capacityPerGroup!==96)throw Error('Unsupported permanent library layout manifest.');
+ const savedLocations=layoutManifest.groups||{}, actualGroups=new Map(allGroups.map(g=>[g.id,g]));
+ const layoutDiagnostics={unplacedGroups:[],missingGroups:[],changedGroups:[]};
+ const locations=new Map();
+ function laneX(i){return i===0?0:(i%2?Math.ceil(i/2)*LANEGAP:-Math.ceil(i/2)*LANEGAP)}
+ for(const floor of floors){
+  const laneByX=new Map();
+  for(const [id,loc] of Object.entries(savedLocations)){
+   if(Number(loc.floor)!==Number(floor.id))continue;
+   if(!Number.isInteger(loc.row)||loc.row<0||loc.row>=ROWS||!Number.isFinite(loc.laneX)||!Number.isFinite(loc.baseZ))throw Error(`Invalid permanent shelf location for ${id}`);
+   if(!laneByX.has(loc.laneX))laneByX.set(loc.laneX,{x:loc.laneX,gallery:loc.gallery,part:loc.part||1,groups:[]});
+   const lane=laneByX.get(loc.laneX);if(lane.gallery!==loc.gallery)throw Error(`Conflicting gallery locations at ${id}`);
+   const g=actualGroups.get(id);if(!g){layoutDiagnostics.missingGroups.push(id);continue}
+   if(Number(g.floor)!==Number(loc.floor)||g.gallery!==loc.gallery)layoutDiagnostics.changedGroups.push(id);
+   lane.groups.push(g);locations.set(id,loc);
   }
-  let current=0,isOverview=true,yaw=0,pitch=0,stair=null,position=new T.Vector3(0,1.72,7.9),targetCamera=new T.Vector3(37,27,43),lookAt=new T.Vector3(0,h*floors.length*.49,0),dragging=false,moved=false,lastX=0,lastY=0,orbitAngle=.68;
-  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,raycaster=new T.Raycaster(),pointer=new T.Vector2(),keys=new Set();let raf=0,disposed=false;
-  function updateFloor(index){if(index<0||index>=rooms.length)return;const stamp=++gen[index],r=rooms[index];for(const slot of r.slots){const books=getShelfEntries(index,slot.key)||[];slot.display.forEach(({book,face,body},n)=>{const b=books[n];book.visible=!!b;const action=b?()=>onBookSelect?.(b,slot.key):null;face.userData.action=body.userData.action=action;if(!b)return;setMap(face,bookFallback(b));if(index!==current||isOverview||!resolveCover)return;Promise.resolve(resolveCover(b,slot.key)).then(value=>{if(!value||stamp!==gen[index]||disposed)return;const url=typeof value==='object'?value.url:(typeof value==='number'||/^\d+$/.test(String(value))?`https://covers.openlibrary.org/b/id/${value}-M.jpg?default=false`:value);if(!url)return;texLoader.load(url,tex=>{if(stamp!==gen[index]||disposed){tex.dispose();return}tex.colorSpace=T.SRGBColorSpace;setMap(face,tex)},undefined,()=>{})}).catch(()=>{});});}}
-  function enterFloor(index){if(index<0||index>=rooms.length)return;current=index;isOverview=false;stair=null;yaw=0;pitch=.04;position.set(0,index*h+1.72,8);targetCamera.copy(position);camera.position.copy(position);camera.lookAt(position.x,position.y+.04,position.z-1);updateFloor(index);canvas.style.cursor='grab'}
-  function overview(){isOverview=true;targetCamera.set(37,27,43);lookAt.set(0,h*floors.length*.49,0);orbitAngle=.68;canvas.style.cursor='grab'}
-  function focusSection(key){if(isOverview)enterFloor(current);const p=rooms[current].sectionPositions[key];if(!p)return;stair=null;position.set(T.MathUtils.clamp(p.x,-8,8),current*h+1.72,Math.max(-4.4,p.z+2.0));yaw=0;pitch=.15;targetCamera.copy(position)}
-  function hit(event){
-    const rect=canvas.getBoundingClientRect();pointer.x=(event.clientX-rect.left)/rect.width*2-1;pointer.y=-(event.clientY-rect.top)/rect.height*2+1;raycaster.setFromCamera(pointer,camera);
-    // Respect foreground geometry: do not pick a book through a wall or table.
-    const hits=raycaster.intersectObjects(scene.children,true);
-    const first=hits.find(hit=>{for(let node=hit.object;node;node=node.parent)if(node.visible===false)return false;return true});
-    return first&&typeof first.object.userData.action==='function'?first:undefined;
+  const fresh=allGroups.filter(g=>Number(g.floor)===Number(floor.id)&&!savedLocations[g.id]);
+  if(fresh.length){
+   let next=0;while(laneByX.has(laneX(next)))next++;
+   for(let offset=0;offset<fresh.length;offset+=ROWS){while(laneByX.has(laneX(next)))next++;const batch=fresh.slice(offset,offset+ROWS),x=laneX(next++),lane={x,gallery:'New sections · review layout',part:1,groups:batch};laneByX.set(x,lane);
+    batch.forEach((g,row)=>{locations.set(g.id,{floor:floor.id,laneX:x,row,baseZ:-12-row*ROWSTEP,gallery:lane.gallery,part:1});layoutDiagnostics.unplacedGroups.push(g.id)})
+   }
   }
-  function down(e){dragging=true;moved=false;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId)}
-  function movePointer(e){if(dragging){let dx=e.clientX-lastX,dy=e.clientY-lastY;if(Math.abs(dx)+Math.abs(dy)>1)moved=true;if(isOverview){orbitAngle-=dx*.005;targetCamera.set(Math.sin(orbitAngle)*56,27,Math.cos(orbitAngle)*56)}else{yaw-=dx*.004;pitch=T.MathUtils.clamp(pitch-dy*.004,-1.05,1.05)}lastX=e.clientX;lastY=e.clientY}else if(!isOverview)canvas.style.cursor=hit(e)?'pointer':'grab'}
-  function up(e){if(!moved&&!isOverview)hit(e)?.object.userData.action?.();dragging=false}
-  canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',movePointer);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',()=>dragging=false);
-  function collide(x,z){if(x < -10.45||x>10.45||z < -8.8||z>8.45)return true;return rooms[current].colliders.some(r=>x>r.x1&&x<r.x2&&z>r.z1&&z<r.z2)}
-  function translate(forward,side,distance){
-    const dx=(Math.sin(yaw)*forward+Math.cos(yaw)*side)*distance,dz=(-Math.cos(yaw)*forward+Math.sin(yaw)*side)*distance;
-    let nx=position.x+dx,nz=position.z+dz;
-    if(collide(nx,position.z))nx=position.x;if(collide(nx,nz))nz=position.z;
-    // Rail along the inner edge of the shaft has openings at the two landings.
-    const withinFlight=nz>-1.7&&nz<5.55;
-    if(!stair&&nx>8.18&&withinFlight){
-      const enteringBottom=nz>=4.65&&current<floors.length-1;
-      const enteringTop=nz<=-.85&&current>0;
-      if(enteringBottom)stair={flight:current};
-      else if(enteringTop)stair={flight:current-1};
-      else { nx=Math.min(position.x,8.15); }
+  laneAssignments.push([...laneByX.values()].sort((a,b)=>a.x-b.x));
+ }
+ if(layoutDiagnostics.changedGroups.length)throw Error('Existing classifications changed: review the permanent shelf layout before opening.');
+ if(layoutDiagnostics.unplacedGroups.length||layoutDiagnostics.missingGroups.length)console.warn('Library layout needs review',layoutDiagnostics);
+ const xs=laneAssignments.flatMap(a=>a.map(x=>x.x));const maxAbs=Math.max(20,...xs.map(Math.abs));const bounds={x1:-maxAbs-11,x2:maxAbs+11,z1:-116,z2:13,minX:-maxAbs-11,maxX:maxAbs+11,minZ:-116,maxZ:13};sceneBounds=bounds;
+ const material=(c,rough=1)=>new T.MeshStandardMaterial({color:c,roughness:rough}),stone=material(0xa79980),wood=material(0x654931),dark=material(0x3f3025),brass=material(0xc7a86b,.45),paper=material(0xebdabc),glass=new T.MeshStandardMaterial({color:0x9dbac0,transparent:true,opacity:.32,roughness:.2,side:T.DoubleSide}),ceiling=material(0xcbbba2);
+ const lampMat=new T.MeshStandardMaterial({color:0xffe1b1,emissive:0xe0a25c,emissiveIntensity:.45});
+ function box(parent,w,h,d,x,y,z,mat){const m=new T.Mesh(new T.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);parent.add(m);return m}
+ function textureLabel(title,subtitle='',bg='#2f4739',aspect=4){
+  // Match canvas dimensions to the actual sign proportions: text is never stretched vertically.
+  const c=document.createElement('canvas');c.height=112;c.width=Math.max(48,Math.min(2048,Math.round(c.height*aspect)));
+  const ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);ctx.strokeStyle='#d4bc88';ctx.lineWidth=2;ctx.strokeRect(4,4,w-8,h-8);ctx.textAlign='center';
+  function fit(text,size,weight,color,y){ctx.fillStyle=color;ctx.font=`${weight} ${size}px sans-serif`;const measured=ctx.measureText(String(text)).width;if(measured>w*.92){size=Math.max(8,Math.floor(size*w*.92/measured));ctx.font=`${weight} ${size}px sans-serif`}ctx.fillText(String(text),w/2,y)}
+  fit(title,Math.round(h*.45),'600','#f9efd9',h*.53);if(subtitle)fit(String(subtitle).toUpperCase(),Math.round(h*.16),'500','#d9c89f',h*.79);
+  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;
+ }
+ function sign(parent,title,sub,x,y,z,w,h,action,rotation=0){const mesh=new T.Mesh(new T.PlaneGeometry(w,h),new T.MeshStandardMaterial({map:textureLabel(title,sub,undefined,w/h),side:T.DoubleSide}));mesh.position.set(x,y,z);mesh.rotation.y=rotation;if(action)mesh.userData.action=action;parent.add(mesh);return mesh}
+ function fallback(book){return textureLabel(book.title||'Untitled',book.author||'Reading Atlas','#584b3c',.76/1.08)}
+ const floorTitleMeshes=[];
+ // A single continuous multi-storey shell with the facade open in overview.
+ const width=bounds.x2-bounds.x1,depth=bounds.z2-bounds.z1,centerZ=(bounds.z1+bounds.z2)/2;
+ box(scene,width+2,1,depth+2,0,-.65,centerZ,stone);box(scene,width+2,.7,depth+2,0,H*floors.length+.35,centerZ,stone);
+ for(let i=0;i<floors.length;i++){
+  const floor=floors[i],room=new T.Group();room.position.y=i*H;scene.add(room);const wall=material(floor.colors?.[1]??0x726e5e),accent=material(floor.colors?.[0]??0x554c3a);
+  const blockers=[],pick=[],bookSpecs=[],coverSpecs=[],spineSpecs=[],groups=[],shelfBacks=[],shelfBoards=[],lanes=laneAssignments[i];
+  // Large floor plates include a continuous open stairwell on the lobby's right.
+  function plate(y,thick,mat){const xL=bounds.x1,xR=bounds.x2,zB=bounds.z1,zF=bounds.z2;box(room,8.2-xL,thick,depth,(xL+8.2)/2,y,centerZ,mat);box(room,xR-10.7,thick,depth,(xR+10.7)/2,y,centerZ,mat);box(room,2.5,thick,(-2-zB),9.45,y,(zB-2)/2,mat);box(room,2.5,thick,(zF-5.7),9.45,y,(zF+5.7)/2,mat)}
+  if(i===0)box(room,width,.35,depth,0,0,centerZ,stone);else plate(0,.35,stone);if(i===floors.length-1)box(room,width,.24,depth,0,7.28,centerZ,ceiling);else plate(7.28,.24,ceiling);
+  box(room,width,7,.35,0,3.6,bounds.z1,wall);box(room,.35,7,depth,bounds.x1,3.6,centerZ,wall);box(room,.35,7,depth,bounds.x2,3.6,centerZ,wall);
+  for(let x=bounds.x1+8;x<bounds.x2;x+=16){box(room,.35,7,.35,x,3.55,12,stone);box(room,.35,.16,depth,x,7.02,centerZ,dark)}
+  const facade=sign(scene,`${floor.number} · ${floor.name}`,'SELECT FLOOR',0,i*H+5.65,13.3,22,1.25,()=>onFloorChange?.(i));floorTitleMeshes.push(facade);
+  // Billboard overview nameplates remain readable at the scale of the full building.
+  const billboard=new T.Sprite(new T.SpriteMaterial({map:textureLabel(`${floor.number} · ${floor.name}`,'SELECT FLOOR',undefined,52/5.5),depthTest:false}));billboard.position.set(-maxAbs*.46,i*H+5.65,17);billboard.scale.set(52,5.5,1);billboard.renderOrder=1000;billboard.userData.action=()=>onFloorChange?.(i);scene.add(billboard);floorTitleMeshes.push(billboard);
+  const landing=sign(room,`${floor.number} · ${floor.name}`,'ATRIUM  ·  FLOOR DIRECTORY',0,5.55,-1.1,11,1.05,null);pick.push(landing);
+  for(const x of [-4,4])for(const z of [-4,5]){box(room,.08,.45,.08,x,6.8,z,brass);box(room,1,.12,.8,x,6.55,z,lampMat)}
+  // Lift doors and physical staircase. Lift UI is accessible from the lobby and the 3D door.
+  box(room,2.5,4.4,.55,-7.4,2.32,-.15,dark);box(room,2.15,3.9,.1,-7.4,2.1,.18,glass);const liftSign=sign(room,'GLASS LIFT','CHOOSE A FLOOR',-7.4,4.9,.25,2.7,.65,()=>onLift?.());pick.push(liftSign);const liftPad=box(room,2.1,3.9,.05,-7.4,2.1,.25,glass);liftPad.userData.action=()=>onLift?.();pick.push(liftPad);blockers.push({x1:-8.8,x2:-6,z1:-.6,z2:.2});
+  for(let n=0;n<20;n++){const y=(n+1)*H/20;box(room,2,.23,.38,9.45,y,5.15-n*.36,accent)}for(let n=0;n<10;n++){const y=(n*2+1)*H/20;box(room,.09,.7,.09,8.35,y+.5,5.15-n*.72,brass);box(room,.09,.7,.09,10.55,y+.5,5.15-n*.72,brass)}
+  const stairs=sign(room,i<floors.length-1?'STAIRS UP':'STAIRS DOWN','WALK OR SELECT',9.45,4,-.6,2.65,.7,()=>onFloorChange?.(i<floors.length-1?i+1:i-1));pick.push(stairs);
+  // The reading desk and globe are functional stations, not decorative controls.
+  box(room,3.2,.23,1.5,-2.6,1.1,6,wood);for(const x of [-3.9,-1.3])for(const z of [5.5,6.5])box(room,.14,1,.14,x,.55,z,dark);
+  const deskSign=sign(room,'READING DESK','YOUR STACK',-2.6,1.9,5.26,2.6,.48,()=>onDesk?.());pick.push(deskSign);blockers.push({x1:-4.4,x2:-.8,z1:5.05,z2:6.95});
+  const globe=new T.Mesh(new T.SphereGeometry(.9,24,16),new T.MeshStandardMaterial({color:floor.colors?.[1]??0x789087,roughness:.6,metalness:.15}));globe.position.set(3.1,2,5.4);globe.userData.action=()=>onMapSelect?.();room.add(globe);pick.push(globe);box(room,.18,1.0,.18,3.1,.9,5.4,brass);const globeSign=sign(room,'ATLAS TABLE','OPEN THE MAP',3.1,3.45,5.4,2.5,.52,()=>onMapSelect?.());pick.push(globeSign);blockers.push({x1:1.8,x2:4.4,z1:4.2,z2:6.6});
+  // Landmarks differ by floor but serve as wayfinding: orrery, reading stand, gallery plinth and author desk.
+  if(i===2){const ring=new T.Mesh(new T.TorusGeometry(1.2,.04,8,40),brass);ring.rotation.x=.9;ring.position.set(0,4,8.3);room.add(ring)}
+  if(i===3){box(room,2,.18,.8,5,1.3,8,wood);box(room,.14,1.2,.14,5,.65,8,wood)}
+  if(i===4)box(room,2,.9,1.4,5,.6,8,stone);
+  if(i===5)sign(room,'AUTHORS’ OBSERVATORY','PATHS THROUGH A LIFETIME OF READING',0,6.4,9.2,8,.8,null);
+  for(const lane of lanes){const portal=sign(room,lane.gallery,`GALLERY ${lane.part} · CONTINUE AHEAD`,lane.x,5.9,-3.8,12,1.05,()=>onGroupSelect?.(lane.groups[0]?.id));pick.push(portal);for(const dx of [-6,6])box(room,.26,5.3,.3,lane.x+dx,2.7,-3.9,dark);box(room,12.2,.24,.32,lane.x,5.35,-3.9,dark);
+   lane.groups.forEach(g=>{
+    const baseZ=locations.get(g.id).baseZ;const center={x:lane.x,z:baseZ};groups.push({id:g.id,x:center.x,z:center.z});locByGroup.set(g.id,{floor:i,x:center.x,z:center.z,laneX:lane.x,group:g});
+    for(let bay=0;bay<BAYS;bay++){
+     const side=bay%2===0?-1:1,bayRow=Math.floor(bay/2),cx=lane.x+side*3.65,bz=baseZ-bayRow*6;const books=g.books.filter((b,n)=>Math.floor((Number.isInteger(b.slot)?b.slot:n)/SLOTS)===bay);if(!books.length)continue;
+     // Every occupied physical bay has its own named sign; reserved adjacent bays keep future growth stable.
+     shelfBacks.push({x:cx,y:2.5,z:bz,w:1,h:4.5,d:5.25});for(let r=0;r<2;r++)shelfBoards.push({x:cx,y:.75+r*1.65,z:bz,w:1.15,h:.14,d:5.25});
+     const rotation=side<0?Math.PI/2:-Math.PI/2,faceX=cx-side*.56,sg=sign(room,g.label,`${g.books.length} ENTRIES · BAY ${bay+1}`,faceX,5.06,bz,5.15,.7,()=>onGroupSelect?.(g.id),rotation);pick.push(sg);
+     blockers.push({x1:cx-.73,x2:cx+.73,z1:bz-2.78,z2:bz+2.78});
+     for(const b of books){const slot=Number.isInteger(b.slot)?b.slot:g.books.indexOf(b),local=slot%SLOTS,row=Math.floor(local/12),column=local%12,bookX=cx-side*.62,bookZ=bz+(column-5.5)*.42,bookY=1.45+row*1.65;const location={uid:b.uid,floor:i,groupId:g.id,gallery:lane.gallery,bay:bay+1,row:row+1,slot:column+1,x:bookX,z:bookZ,approachX:lane.x,approachZ:bookZ,side,book:b};address.set(b.uid,location);bookSpecs.push(location)}
+     spineSpecs.push({x:cx-side*1.01,z:bz,rotation,side,books,mesh:null});
+     const lead=books[0];if(lead){const display=new T.Mesh(new T.PlaneGeometry(.76,1.08),new T.MeshStandardMaterial({color:0xffffff,map:fallback(lead),side:T.DoubleSide}));display.position.set(faceX-side*.5,4.1,bz);display.rotation.y=rotation;display.userData.action=()=>{inspectBook(lead.uid,0);onBookSelect?.(lead)};room.add(display);coverSpecs.push({mesh:display,book:lead,group:g,loaded:false,pending:false,token:0});}
     }
-    if(stair){
-      // On the flight, keep the visitor between the handrails and follow its slope.
-      nx=T.MathUtils.clamp(nx,8.23,10.35);
-      const progress=T.MathUtils.clamp((5.55-nz)/7.25,0,1);
-      position.y=stair.flight*h+1.72+progress*h;
-      if(nz<=-1.70){
-        current=stair.flight+1;stair=null;nz=-1.78;position.y=current*h+1.72;
-        onFloorChange?.(current,{viaStairs:true});
-      }else if(nz>=5.55){
-        current=stair.flight;stair=null;nz=5.63;position.y=current*h+1.72;
-        onFloorChange?.(current,{viaStairs:true});
-      }
-    }else position.y=current*h+1.72;
-    position.x=nx;position.z=nz;targetCamera.copy(position);
+   });
   }
-  function walk(direction){if(isOverview){onFloorChange?.(current);if(isOverview)enterFloor(current)}const map={forward:[1,0],back:[-1,0],left:[0,-1],right:[0,1]};if(map[direction])translate(...map[direction],.8);else if(direction==='lookLeft')yaw-=.18;else if(direction==='lookRight')yaw+=.18;else if(direction==='lookUp')pitch=T.MathUtils.clamp(pitch+.16,-1.05,1.05);else if(direction==='lookDown')pitch=T.MathUtils.clamp(pitch-.16,-1.05,1.05)}
-  function keydown(e){if(e.target?.matches?.('input,textarea,select,[contenteditable="true"]')||document.querySelector('dialog[open]'))return;const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','q','e','i','k'].includes(k)){e.preventDefault();keys.add(k);if(isOverview){onFloorChange?.(current);if(isOverview)enterFloor(current)}}}
-  function keyup(e){keys.delete(e.key.toLowerCase())}function blur(){keys.clear()};window.addEventListener('keydown',keydown);window.addEventListener('keyup',keyup);window.addEventListener('blur',blur);
-  const resize=()=>{const w=canvas.clientWidth,ht=canvas.clientHeight;if(!w||!ht)return;renderer.setSize(w,ht,false);camera.aspect=w/ht;camera.updateProjectionMatrix()};const ro=new ResizeObserver(resize);ro.observe(canvas);resize();
-  camera.position.copy(targetCamera);camera.lookAt(lookAt);let last=performance.now();function frame(now){if(disposed)return;const dt=Math.min((now-last)/1000,.05);last=now;if(document.querySelector('dialog[open]'))keys.clear();if(!isOverview){const f=(keys.has('w')||keys.has('arrowup')?1:0)-(keys.has('s')||keys.has('arrowdown')?1:0),side=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);translate(f,side,dt*3.6);yaw-=(keys.has('q')?1:0)*dt*1.5-(keys.has('e')?1:0)*dt*1.5;pitch=T.MathUtils.clamp(pitch+(keys.has('i')?1:0)*dt-(keys.has('k')?1:0)*dt,-1.05,1.05);lookAt.set(position.x+Math.sin(yaw)*Math.cos(pitch),position.y+Math.sin(pitch),position.z-Math.cos(yaw)*Math.cos(pitch))}camera.position.lerp(targetCamera,reduced?1:.14);camera.lookAt(lookAt);renderer.render(scene,camera);raf=requestAnimationFrame(frame)}raf=requestAnimationFrame(frame);
-  function dispose(){disposed=true;cancelAnimationFrame(raf);ro.disconnect();window.removeEventListener('keydown',keydown);window.removeEventListener('keyup',keyup);window.removeEventListener('blur',blur);canvas.removeEventListener('pointerdown',down);canvas.removeEventListener('pointermove',movePointer);canvas.removeEventListener('pointerup',up);scene.traverse(o=>{if(o.geometry)o.geometry.dispose();for(const m of Array.isArray(o.material)?o.material:[o.material])if(m){m.map?.dispose();m.dispose()}});renderer.dispose()}
-  return{enterFloor,overview,updateFloor,focusSection,walk,dispose};
+  function instanceShelves(specs,mat){if(!specs.length)return null;const mesh=new T.InstancedMesh(new T.BoxGeometry(1,1,1),mat,specs.length),o=new T.Object3D();specs.forEach((v,j)=>{o.position.set(v.x,v.y,v.z);o.scale.set(v.w,v.h,v.d);o.updateMatrix();mesh.setMatrixAt(j,o.matrix)});mesh.instanceMatrix.needsUpdate=true;room.add(mesh);return mesh}
+  const backs=instanceShelves(shelfBacks,dark);instanceShelves(shelfBoards,wood);if(backs)pick.push(backs);
+  const inst=new T.InstancedMesh(new T.BoxGeometry(.74,1.17,.37),new T.MeshStandardMaterial({color:0xffffff,roughness:.95}),bookSpecs.length);const temp=new T.Object3D();const palette=[0x715342,0x4d6254,0x66484b,0x7b6851,0x495c65,0x6e5a68];bookSpecs.forEach((b,n)=>{temp.position.set(b.x,b.bookY||1.45,b.z);temp.position.y=1.45+(b.row-1)*1.65;temp.updateMatrix();inst.setMatrixAt(n,temp.matrix);inst.setColorAt(n,new T.Color(palette[n%palette.length]));});inst.instanceMatrix.needsUpdate=true;inst.userData.books=bookSpecs;room.add(inst);pick.push(inst);
+  rooms.push({room,pick,blockers,groups,lanes,inst,bookSpecs,coverSpecs,spineSpecs});
+ }
+ let current=0,isOverview=true,position=new T.Vector3(0,1.72,8),target=new T.Vector3(),look=new T.Vector3(),yaw=0,pitch=0,stair=null,drag=false,moved=false,lastX=0,lastY=0,orbit=.12,hoverKey='',selected=null,inspection=null,route=null,routeGeometry=null,lighting='day',quality='auto',lastCoverCheck=0,disposed=false;
+ const raycaster=new T.Raycaster(),pointer=new T.Vector2(),keys=new Set(),clock={last:performance.now()};const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;const textureLoader=new T.TextureLoader();textureLoader.setCrossOrigin('anonymous');
+ const colorDefault=new T.Color(0x9a765f),colorSelected=new T.Color(0xffe072);let highlights=new Set();
+ function initView(){target.set(width*.12,H*3.1,bounds.z2+depth*.68);look.set(0,H*2.6,-15);camera.position.copy(target);camera.lookAt(look)}
+ function qualitySet(q){quality=q;const constrained=matchMedia('(pointer: coarse)').matches||(navigator.deviceMemory&&navigator.deviceMemory<=4)||(navigator.hardwareConcurrency&&navigator.hardwareConcurrency<=4);const ratio=q==='low'?1:q==='high'?Math.min(devicePixelRatio||1,2):Math.min(devicePixelRatio||1,constrained?1:1.35);renderer.setPixelRatio(ratio);resize()}
+ function setLighting(mode){lighting=mode==='evening'?'evening':'day';scene.background.setHex(lighting==='day'?0x283b37:0x171e2c);scene.fog.color.copy(scene.background);hemi.intensity=lighting==='day'?2.25:1.2;ambient.intensity=lighting==='day'?.62:.42;sun.intensity=lighting==='day'?1.7:.42;renderer.toneMappingExposure=lighting==='day'?1.22:1.0}
+ function refreshColors(){for(const r of rooms){r.bookSpecs.forEach((entry,i)=>r.inst.setColorAt(i,new T.Color(highlights.has(entry.uid)?0xf9d778:[0x805f4a,0x547061,0x81545b,0x9c7b5e,0x4f6e79,0x78647e][i%6])));if(r.inst.instanceColor)r.inst.instanceColor.needsUpdate=true}}
+ function setHighlights(uids){highlights=new Set(uids||[]);refreshColors()}
+ function enterFloor(index){if(index<0||index>=rooms.length)return;clearRoute();current=index;isOverview=false;stair=null;position.set(0,index*H+1.72,10);yaw=0;pitch=0;target.copy(position);camera.position.copy(position);look.set(position.x,position.y,position.z-1);camera.lookAt(look);roomVisibility();reportLocation(null);updateNearby(true)}
+ function roomVisibility(){rooms.forEach((r,i)=>r.room.visible=isOverview||Math.abs(i-current)<=1);floorTitleMeshes.forEach(m=>m.visible=isOverview)}
+ function overview(){releaseBook();isOverview=true;stair=null;orbit=.12;roomVisibility();initView();onOverview?.()}
+ function nearGroup(){let min=Infinity,best=null;for(const g of rooms[current].groups){const d=Math.hypot(position.x-g.x,position.z-g.z);if(d<min){min=d;best=g}}return min<9?best:null}
+ let lastLocation='';function reportLocation(groupId){const key=current+'|'+(groupId||'');if(key===lastLocation)return;lastLocation=key;onLocationChange?.({floor:current,groupId:groupId||null})}
+ function collide(x,z){if(x<bounds.x1+1||x>bounds.x2-1||z<bounds.z1+1||z>bounds.z2-1)return true;return rooms[current].blockers.some(a=>x>a.x1-.23&&x<a.x2+.23&&z>a.z1-.23&&z<a.z2+.23)}
+ function move(forward,side,d){const dx=(Math.sin(yaw)*forward+Math.cos(yaw)*side)*d,dz=(-Math.cos(yaw)*forward+Math.sin(yaw)*side)*d;let x=position.x+dx,z=position.z+dz;if(collide(x,position.z))x=position.x;if(collide(x,z))z=position.z;const within=z>-1.7&&z<5.55;if(!stair&&x>8.18&&x<10.6&&within){if(z>=4.65&&current<floors.length-1)stair={flight:current};else if(z<=-.85&&current>0)stair={flight:current-1};else x=Math.min(position.x,8.15)}if(stair){x=T.MathUtils.clamp(x,8.23,10.35);const p=T.MathUtils.clamp((5.55-z)/7.25,0,1);position.y=stair.flight*H+1.72+p*H;if(z<=-1.7){current=stair.flight+1;stair=null;z=-1.78;position.y=current*H+1.72;roomVisibility();onFloorChange?.(current,{viaStairs:true})}else if(z>=5.55){current=stair.flight;stair=null;z=5.63;position.y=current*H+1.72;roomVisibility();onFloorChange?.(current,{viaStairs:true})}}else position.y=current*H+1.72;position.x=x;position.z=z;target.copy(position);reportLocation(nearGroup()?.id||null)}
+ function walk(direction){if(isOverview){enterFloor(current);onFloorChange?.(current)}const map={forward:[1,0],back:[-1,0],left:[0,-1],right:[0,1]};if(map[direction])move(...map[direction],.8);else if(direction==='lookLeft')yaw-=.16;else if(direction==='lookRight')yaw+=.16;else if(direction==='lookUp')pitch=T.MathUtils.clamp(pitch+.14,-1,1);else if(direction==='lookDown')pitch=T.MathUtils.clamp(pitch-.14,-1,1)}
+ function focusGroup(groupId){const dest=locByGroup.get(groupId);if(!dest)return false;if(dest.floor!==current||isOverview){enterFloor(dest.floor);onFloorChange?.(dest.floor,{guided:true})}stair=null;position.set(dest.laneX+1.5,current*H+1.72,dest.z);yaw=-Math.PI/2;pitch=.21;target.copy(position);camera.position.copy(position);reportLocation(groupId);updateNearby(true);return true}
+ function getAddress(uid){const a=address.get(uid);return a?{floor:a.floor,groupId:a.groupId,gallery:a.gallery,bay:a.bay,row:a.row,slot:a.slot,x:a.x,z:a.z}:null}
+ function clearRoute(){if(route){route.parent?.remove(route);route.geometry.dispose();route.material.dispose();route=null}}
+ function routeTo(x,z){clearRoute();const destination={x,z};const start={x:position.x,z:position.z};const way=findRoute({start,end:destination,bounds,obstacles:rooms[current].blockers,step:1.3,clearance:.30,maxVisited:50000});if(!way.length)return false;const points=way.map(p=>new T.Vector3(p.x,.32,p.z));const geo=new T.BufferGeometry().setFromPoints(points);route=new T.Line(geo,new T.LineBasicMaterial({color:0xffdd8f,depthTest:false}));rooms[current].room.add(route);return true}
+ function focusBook(uid,opts={}){const dest=address.get(uid);if(!dest)return false;setHighlights([uid]);if(opts.routeOnly){if(isOverview){enterFloor(current);onFloorChange?.(current,{guided:true})}if(dest.floor!==current)return routeTo(-5,2);return routeTo(dest.approachX,dest.approachZ)}if(dest.floor!==current||isOverview){enterFloor(dest.floor);onFloorChange?.(dest.floor,{guided:true})}stair=null;position.set(dest.approachX,current*H+1.72,dest.approachZ);yaw=dest.side<0?-Math.PI/2:Math.PI/2;pitch=Math.atan2((1.45+(dest.row-1)*1.65)-1.72,Math.max(1,Math.abs(dest.x-dest.approachX))); target.copy(position);camera.position.copy(position);reportLocation(dest.groupId);clearRoute();updateNearby(true);return true}
+ function spineTexture(spec){
+  const c=document.createElement('canvas');c.width=1024;c.height=512;const x=c.getContext('2d');x.clearRect(0,0,c.width,c.height);x.fillStyle='#fff4da';x.textAlign='left';x.font='bold 21px Georgia';
+  for(const b of spec.books){const slot=Number.isInteger(b.slot)?b.slot:0,col=slot%12,row=Math.floor((slot%24)/12),displayCol=spec.side<0?11-col:col;const xx=(displayCol+.5)*1024/12,yy=row===1?20:292;x.save();x.translate(xx,yy);x.rotate(Math.PI/2);x.fillText(b.title||'Untitled',0,0,195);x.restore()}
+  const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;
+ }
+ function updateNearby(force=false){if(isOverview)return;const now=performance.now();if(!force&&now-lastCoverCheck<900)return;lastCoverCheck=now;const currentRoom=rooms[current];
+  const desiredSpines=new Set(currentRoom.spineSpecs.map(s=>({s,d:Math.hypot(position.x-s.x,position.z-s.z)})).filter(x=>x.d<15).sort((a,b)=>a.d-b.d).slice(0,6).map(x=>x.s));
+  for(const r of rooms)for(const spec of r.spineSpecs){if(spec.mesh&&!desiredSpines.has(spec)){r.room.remove(spec.mesh);spec.mesh.geometry.dispose();spec.mesh.material.map.dispose();spec.mesh.material.dispose();spec.mesh=null}}
+  for(const spec of desiredSpines)if(!spec.mesh){const mesh=new T.Mesh(new T.PlaneGeometry(5.04,2.87),new T.MeshBasicMaterial({map:spineTexture(spec),transparent:true,depthWrite:false,side:T.DoubleSide}));mesh.position.set(spec.x,2.275,spec.z);mesh.rotation.y=spec.rotation;mesh.userData.ignoreRaycast=true;currentRoom.room.add(mesh);spec.mesh=mesh}
+  const desiredCovers=new Set(currentRoom.coverSpecs.map(s=>({s,d:Math.hypot(position.x-s.mesh.position.x,position.z-s.mesh.position.z)})).filter(x=>x.d<15).sort((a,b)=>a.d-b.d).slice(0,4).map(x=>x.s));
+  for(const r of rooms)for(const s of r.coverSpecs)if(!desiredCovers.has(s)&&(s.loaded||s.pending)){s.token++;s.pending=false;if(s.mesh.material.map){s.mesh.material.map.dispose();s.mesh.material.map=fallback(s.book);s.mesh.material.needsUpdate=true}s.loaded=false}
+  if(!resolveCover)return;for(const s of desiredCovers){if(s.loaded||s.pending)continue;s.pending=true;const token=++s.token;Promise.resolve(resolveCover(s.book,s.group.collection)).then(id=>{if(token!==s.token||disposed)return;s.pending=false;if(!id)return;textureLoader.load(`https://covers.openlibrary.org/b/id/${id}-M.jpg?default=false`,tex=>{if(token!==s.token||disposed){tex.dispose();return}tex.colorSpace=T.SRGBColorSpace;s.mesh.material.map?.dispose();s.mesh.material.map=tex;s.mesh.material.needsUpdate=true;s.loaded=true},undefined,()=>{})}).catch(()=>{if(token===s.token)s.pending=false})}
+ }
+ function placeInspection(){
+  if(!inspection)return;const rect=canvas.getBoundingClientRect(),dialog=document.querySelector('#detail');
+  const depth=1.85,visibleWidth=2*depth*Math.tan(camera.fov*Math.PI/360)*camera.aspect;
+  if(!rect.width||!rect.height||!Number.isFinite(visibleWidth)){inspection.group.position.x=-.65;return}
+  const free=dialog?.open?T.MathUtils.clamp(dialog.getBoundingClientRect().left-rect.left,0,rect.width):rect.width;
+  const bookPixels=rect.width/visibleWidth;inspection.group.visible=free>=bookPixels+24;
+  inspection.group.position.x=inspection.group.visible?(free/2/rect.width-.5)*visibleWidth:-.65;
+ }
+ function inspectBook(uid,angle=0){const dest=address.get(uid);if(!dest)return false;if(!inspection||inspection.uid!==uid){releaseBook();const group=new T.Group();group.position.set(-.65,-.05,-1.85);camera.add(group);const body=box(group,1.0,1.45,.18,0,0,0,wood),face=new T.Mesh(new T.PlaneGeometry(.98,1.42),new T.MeshStandardMaterial({map:fallback(dest.book),side:T.DoubleSide}));face.position.z=.10;group.add(face);inspection={uid,group,face,animationStart:reduced?null:performance.now()};if(resolveCover)Promise.resolve(resolveCover(dest.book,dest.book.collection)).then(id=>{if(!id||inspection?.uid!==uid)return;textureLoader.load(`https://covers.openlibrary.org/b/id/${id}-M.jpg?default=false`,tex=>{if(inspection?.uid!==uid){tex.dispose();return}tex.colorSpace=T.SRGBColorSpace;inspection.face.material.map.dispose();inspection.face.material.map=tex;inspection.face.material.needsUpdate=true},undefined,()=>{})}).catch(()=>{})}inspection.group.rotation.y=Number(angle)||0;placeInspection();return true}
+ function releaseBook(){if(!inspection)return;camera.remove(inspection.group);inspection.group.traverse(o=>{o.geometry?.dispose();if(o.material&&o.material!==wood){o.material.map?.dispose();o.material.dispose()}});inspection=null}
+ function getMap(index){const r=rooms[index];return{bounds:{...bounds},groups:r?r.groups.map(g=>({...g})):[],player:{x:position.x,z:position.z},floor:index}}
+ function hit(event){const rect=canvas.getBoundingClientRect();pointer.x=(event.clientX-rect.left)/rect.width*2-1;pointer.y=-(event.clientY-rect.top)/rect.height*2+1;raycaster.setFromCamera(pointer,camera);const candidates=isOverview?floorTitleMeshes:rooms[current].room.children.filter(o=>o.isMesh&&!o.userData.ignoreRaycast);const intersections=raycaster.intersectObjects(candidates,false);const first=intersections.find(hit=>{for(let node=hit.object;node;node=node.parent)if(node.visible===false)return false;return true});if(!first)return;return (first.object.userData.books&&first.instanceId!==undefined)||typeof first.object.userData.action==='function'?first:undefined}
+ function showHit(hit){if(!hit){onHover?.('');return}if(hit.instanceId!==undefined){const b=hit.object.userData.books?.[hit.instanceId];onHover?.(b?`${b.book.title} · ${b.book.author}`:'')}else onHover?.('Select')}
+ function down(e){drag=true;moved=false;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId)}
+ function pointerMove(e){if(drag){let dx=e.clientX-lastX,dy=e.clientY-lastY;if(Math.abs(dx)+Math.abs(dy)>1)moved=true;if(isOverview){orbit-=dx*.003;const midZ=(bounds.z1+bounds.z2)/2,r=Math.max(width,depth)*1.05;target.set(Math.sin(orbit)*r,H*3.1,midZ+Math.cos(orbit)*r)}else{yaw-=dx*.004;pitch=T.MathUtils.clamp(pitch-dy*.004,-1.05,1.05)}lastX=e.clientX;lastY=e.clientY}else{const h=hit(e);canvas.style.cursor=h?'pointer':'grab';showHit(h)}}
+ function up(e){if(!moved){const h=hit(e);if(h){if(h.instanceId!==undefined){const item=h.object.userData.books?.[h.instanceId];if(item){inspectBook(item.uid,0);onBookSelect?.(item.book)}}else h.object.userData.action?.()}}drag=false}
+ const listen=(o,k,f,opts)=>{o.addEventListener(k,f,opts);listeners.push([o,k,f,opts])},listeners=[];listen(canvas,'pointerdown',down);listen(canvas,'pointermove',pointerMove);listen(canvas,'pointerup',up);listen(canvas,'pointercancel',()=>drag=false);
+ function keyDown(e){if(e.target?.matches?.('input,textarea,select,[contenteditable="true"]')||document.querySelector('dialog[open]'))return;const k=e.key.toLowerCase();if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright','q','e','i','k'].includes(k)){e.preventDefault();keys.add(k);if(isOverview){enterFloor(current);onFloorChange?.(current)}}}function keyUp(e){keys.delete(e.key.toLowerCase())}listen(window,'keydown',keyDown);listen(window,'keyup',keyUp);listen(window,'blur',()=>keys.clear());
+ function resize(){const w=canvas.clientWidth,h=canvas.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();if(inspection)placeInspection()}const ro=new ResizeObserver(resize);ro.observe(canvas);qualitySet('auto');initView();let raf=0;
+ function frame(now){if(disposed)return;if(document.hidden){raf=0;keys.clear();return}const dt=Math.min((now-clock.last)/1000,.05);clock.last=now;if(document.querySelector('dialog[open]'))keys.clear();if(!isOverview){const f=(keys.has('w')||keys.has('arrowup')?1:0)-(keys.has('s')||keys.has('arrowdown')?1:0),side=(keys.has('d')||keys.has('arrowright')?1:0)-(keys.has('a')||keys.has('arrowleft')?1:0);if(f||side)move(f,side,dt*6);yaw-=(keys.has('q')?1:0)*dt*1.5-(keys.has('e')?1:0)*dt*1.5;pitch=T.MathUtils.clamp(pitch+(keys.has('i')?1:0)*dt-(keys.has('k')?1:0)*dt,-1.05,1.05);look.set(position.x+Math.sin(yaw)*Math.cos(pitch),position.y+Math.sin(pitch),position.z-Math.cos(yaw)*Math.cos(pitch));updateNearby()}camera.position.lerp(target,reduced?1:.14);camera.lookAt(look);if(inspection?.animationStart!==null&&inspection?.animationStart!==undefined){const p=Math.min(1,Math.max(0,(now-inspection.animationStart)/240)),ease=1-Math.pow(1-p,3);inspection.group.scale.setScalar(.9+.1*ease);inspection.group.position.z=-2.05+.2*ease;if(p===1)inspection.animationStart=null}renderer.render(scene,camera);raf=requestAnimationFrame(frame)}function visibility(){if(document.hidden){keys.clear();if(raf)cancelAnimationFrame(raf);raf=0}else if(!raf&&!disposed){clock.last=performance.now();raf=requestAnimationFrame(frame)}}listen(document,'visibilitychange',visibility);raf=document.hidden?0:requestAnimationFrame(frame);
+ function dispose(){disposed=true;cancelAnimationFrame(raf);clearRoute();releaseBook();ro.disconnect();for(const [o,k,f,opts]of listeners)o.removeEventListener(k,f,opts);scene.traverse(o=>{o.geometry?.dispose();for(const m of Array.isArray(o.material)?o.material:[o.material])if(m){m.map?.dispose();m.dispose()}});renderer.dispose()}
+ return{enterFloor,overview,focusGroup,focusBook,clearRoute,getLayoutDiagnostics:()=>({...layoutDiagnostics}),setHighlights,setLighting,setQuality:qualitySet,walk,getMap,getAddress,inspectBook,releaseBook,dispose};
 }
