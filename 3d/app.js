@@ -1,19 +1,20 @@
 import { loadCatalogue, resolveCover, getCoverInfo, COLLECTION_NAMES as names } from './catalogue.js';
 import { buildAtlas, FLOORS, searchText } from './classification.js';
 import { createLibraryWorld } from './world.js';
+import { createAtlasMap } from './atlas-map.js';
 import { loadDesk, saveDesk, getDeskStatus, getProgress, setProgress, getTaskProgress, setTaskProgress } from './progress.js';
 
 const $ = s => document.querySelector(s);
 const esc = v => String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let atlas, world, currentFloor=0, currentCollection='world', currentGroup=null, overview=true;
-let selectedBook=null, selectedAngle=0, resultLimit=40, desk=loadDesk(), detailGeneration=0, mapTimer, hashGuard=false;
+let selectedBook=null, selectedAngle=0, resultLimit=40, desk=loadDesk(), detailGeneration=0, mapTimer, hashGuard=false, pendingRoute=null, globe=null;
 const searchIndex=new Map();
 function notify(text){$('#status').textContent=text;}
 function address(b){const a=world?.getAddress?.(b.uid),slot=b.slot??0;return `${FLOORS[b.floor].number} · ${FLOORS[b.floor].name} / ${b.groupLabel} / Bay ${a?.bay??Math.floor(slot/24)+1} · Book ${slot%24+1}`;}
 function setHash(params){const value=new URLSearchParams(params).toString();if(location.hash.slice(1)!==value)history.replaceState(null,'',`#${value}`);}
 function closeDialogs(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());}
 function openDialog(id){closeDialogs();if(!$(id).open)$(id).showModal();}
-function hideDirectory(){if(matchMedia('(max-width:800px)').matches){document.body.classList.remove('directory-open');$('#directory-toggle').setAttribute('aria-expanded','false');}}
+function hideDirectory(){if(matchMedia('(max-width:850px)').matches){document.body.classList.remove('directory-open');$('#directory-toggle').setAttribute('aria-expanded','false');}}
 function floorCount(id){return atlas?.books.filter(b=>b.floor===id).length||0;}
 function drawFloors(){
  $('#floors').innerHTML=FLOORS.map(f=>`<button type="button" class="floor" data-floor="${f.id}" aria-current="${!overview&&f.id===currentFloor}"><span class="floor-num">${f.number}</span><span><strong>${esc(f.name)}</strong><small>${floorCount(f.id)} entries · ${f.sections.map(k=>esc(names[k])).join(' / ')}</small></span></button>`).join('');
@@ -38,12 +39,14 @@ function syncFloor(index,groupId=null){
  currentCollection=atlas.groupById.get(groupId)?.collection||(FLOORS[index].sections.includes(currentCollection)?currentCollection:FLOORS[index].sections[0]);
  $('#group-query').value='';drawFloors();drawCollections();drawGroups();drawLocation();drawMinimap();
 }
-function enterFloor(index){if(!atlas)return;closeDialogs();syncFloor(index);world?.enterFloor(index);setHash({floor:index});hideDirectory();notify(`Entered ${FLOORS[index].name}. Choose a named section or walk through the galleries.`);}
+function resumeRoute(){if(!pendingRoute||!world)return;const b=atlas.bookById.get(pendingRoute);if(!b)return;const ok=world.focusBook(b.uid,{routeOnly:true});$('#route-status').textContent=ok?`${b.floor===currentFloor?'Follow the path to':'Take the lift to floor '+FLOORS[b.floor].number+' for'} ${b.title}`:'A walking route could not be found. Use Visit shelf from the book details.';}
+function enterFloor(index){if(!atlas)return;closeDialogs();syncFloor(index);world?.enterFloor(index);setHash({floor:index});hideDirectory();notify(`Entered ${FLOORS[index].name}. Choose a named section or walk through the galleries.`);resumeRoute();}
 function focusGroup(id){
- const g=atlas?.groupById.get(id);if(!g)return;closeDialogs();syncFloor(g.floor,id);world?.focusGroup(id);setHash({floor:g.floor,group:id});hideDirectory();
+ const g=atlas?.groupById.get(id);if(!g)return;closeDialogs();pendingRoute=null;world?.clearRoute?.();syncFloor(g.floor,id);world?.focusGroup(id);setHash({floor:g.floor,group:id});hideDirectory();
+ $('#groups').querySelector('[aria-pressed="true"]')?.scrollIntoView({block:'nearest'});
  $('#floor-description').textContent=g.intro||`${g.label} · ${g.books.length} entries`;notify(`${g.label}: ${g.books.length} entries in permanent shelf positions.`);
 }
-function buildingView(){if(!atlas)return;closeDialogs();overview=true;currentGroup=null;world?.overview();drawFloors();drawGroups();drawLocation();setHash({view:'building'});$('#route-status').textContent='';notify('Select a floor on the building or in the directory.');}
+function buildingView(){if(!atlas)return;closeDialogs();pendingRoute=null;world?.clearRoute?.();overview=true;currentGroup=null;world?.overview();drawFloors();drawGroups();drawLocation();setHash({view:'building'});$('#route-status').textContent='';notify('Select a floor on the building or in the directory.');}
 function fieldValues(b,field){const s=b.source||{},g=b.group||{};return(field==='country'?[g.country,s.country,s.region]:field==='kind'?[s.kind,s.genre,s.genres,s.tag]:[s.period,s.era,b.year]).flat().filter(Boolean).map(String);}
 function prepareSearch(){
  $('#search-collection').innerHTML='<option value="">All collections</option>'+Object.entries(names).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('');
@@ -85,7 +88,15 @@ function showBook(b){
  drawProgress(b);$('#detail').showModal();world?.inspectBook?.(b.uid,0);setHash({floor:b.floor,book:b.uid});
  resolveCover(b,b.collection).then(id=>{if(!id||generation!==detailGeneration||!$('#detail').open)return;const img=new Image();img.alt=`${b.title} — matched edition cover`;img.onload=()=>{if(generation===detailGeneration&&$('#detail').open)$('#detail-cover').append(img);};img.onerror=()=>{if(generation===detailGeneration)$('#detail-extra').textContent+=' · Cover image unavailable';};img.src=`https://covers.openlibrary.org/b/id/${id}-M.jpg?default=false`;if(getCoverInfo(b,b.collection).status==='matched')$('#detail-extra').textContent+=' · Cover: Open Library; edition may vary.';}).catch(()=>{});
 }
-function travelBook(uid,routeOnly=false){const b=atlas.bookById.get(uid);if(!b)return;closeDialogs();if(!routeOnly||!world)syncFloor(b.floor,b.groupId);world?.focusBook(uid,{routeOnly});if(!routeOnly)setHash({floor:b.floor,group:b.groupId,book:uid});$('#route-status').textContent=routeOnly?`Route to ${b.title} · ${address(b)}`:`At the shelf: ${b.title}`;$('#cancel-route').hidden=false;hideDirectory();notify(routeOnly?`Follow the route to ${b.title}.${b.floor!==currentFloor?' Use the lift to floor '+FLOORS[b.floor].number+'.':''}`:`Found ${b.title}. Select its highlighted book to inspect it.`);}
+function travelBook(uid,routeOnly=false){
+ const b=atlas.bookById.get(uid);if(!b)return;
+ if(!world){openSearch(b.collection,b.groupId);notify('The 3D view is unavailable. Browse the full section in this catalogue.');return;}
+ closeDialogs();pendingRoute=routeOnly?uid:null;if(!routeOnly)syncFloor(b.floor,b.groupId);
+ const ok=world.focusBook(uid,{routeOnly});
+ if(!ok){pendingRoute=null;$('#route-status').textContent='A walking route could not be found. Use Visit shelf from the book details.';notify('Route unavailable. The book remains accessible in search.');return;}
+ if(!routeOnly)setHash({floor:b.floor,group:b.groupId,book:uid});
+ $('#route-status').textContent=routeOnly?`Route to ${b.title} · ${address(b)}`:`At the shelf: ${b.title}`;$('#cancel-route').hidden=false;hideDirectory();notify(routeOnly?`Follow the route to ${b.title}.${b.floor!==currentFloor?' Use the lift to floor '+FLOORS[b.floor].number+'.':''}`:`Found ${b.title}. Select its highlighted book to inspect it.`);
+}
 function persistDesk(next){const r=saveDesk(next);if(!r.ok){notify(r.error||'Your browser could not save the reading desk.');return false;}desk=next;return true;}
 function toggleDesk(uid){if(!atlas.bookById.has(uid))return;const saved=desk.includes(uid);if(!persistDesk(saved?desk.filter(x=>x!==uid):[...desk,uid]))return;notify(saved?'Removed from your reading desk.':'Added to your reading desk. Saved on this browser.');if(selectedBook?.uid===uid)$('#save-book').textContent=saved?'+ Add to reading desk':'Remove from reading desk';if($('#search-dialog').open)drawSearch(false);if($('#desk-dialog').open)drawDesk();}
 function drawDesk(){
@@ -94,18 +105,26 @@ function drawDesk(){
  $('#desk-list').innerHTML=books.map((b,i)=>`<article class="desk-item"><span class="desk-number">${String(i+1).padStart(2,'0')}</span><button type="button" data-book="${esc(b.uid)}"><strong>${esc(b.title)}</strong><small>${esc(b.author)} · ${esc(b.groupLabel)}</small></button><div class="card-actions"><button type="button" data-travel="${esc(b.uid)}">Find shelf</button><button type="button" data-desk-move="${esc(b.uid)}" data-direction="-1" aria-label="Move ${esc(b.title)} earlier" ${i===0?'disabled':''}>↑</button><button type="button" data-desk-move="${esc(b.uid)}" data-direction="1" aria-label="Move ${esc(b.title)} later" ${i===books.length-1?'disabled':''}>↓</button><button type="button" data-save="${esc(b.uid)}" aria-label="Remove ${esc(b.title)}">×</button></div></article>`).join('')||'<p class="empty">Your next chapter starts here. Open any book and add it to your reading desk.</p>';
 }
 function drawMapDirectory(){const q=$('#map-query').value.trim().toLocaleLowerCase(),groups=atlas.groups.filter(g=>!q||`${g.label} ${g.gallery} ${names[g.collection]}`.toLocaleLowerCase().includes(q));$('#map-groups').innerHTML=FLOORS.map(f=>{const list=groups.filter(g=>g.floor===f.id);return list.length?`<section class="map-floor"><h3>${f.number} · ${esc(f.name)}</h3><div>${list.map(g=>`<button type="button" class="map-group" data-group="${esc(g.id)}"><strong>${esc(g.label)}</strong><small>${g.books.length} entries · ${esc(names[g.collection])}</small></button>`).join('')}</div></section>`:'';}).join('')||'<p class="empty">No sections match.</p>';}
+async function openMap(){
+ if(!atlas)return;drawMapDirectory();openDialog('#map-dialog');
+ try{if(!globe)globe=await createAtlasMap({canvas:$('#atlas-globe'),groups:atlas.groups.filter(g=>g.collection==='world'),onSelectGroup:g=>focusGroup(typeof g==='string'?g:g.id),onHover:text=>{$('#globe-label').textContent=text||'Drag to rotate · choose a country marker';}});if($('#map-dialog').open){globe.show?.();globe.resize?.();}else globe.hide?.();}
+ catch{$('#globe-label').textContent='Use the complete country and section directory below.';}
+}
 function drawMinimap(){
  if(!atlas||!world)return;const map=world.getMap?.(currentFloor);if(!map?.groups?.length)return;
  const b=map.bounds||{},minX=b.minX??-50,maxX=b.maxX??50,minZ=b.minZ??-80,maxZ=b.maxZ??15,w=Math.max(1,maxX-minX),d=Math.max(1,maxZ-minZ),scale=Math.min(180/w,140/d),x=v=>10+(v-minX)*scale,z=v=>10+(v-minZ)*scale;
+ const mapKey=`${currentFloor}|${currentGroup||''}`;
+ if($('#minimap').dataset.mapKey===mapKey){const player=$('#minimap [data-player]');if(player&&map.player){player.setAttribute('cx',x(map.player.x));player.setAttribute('cy',z(map.player.z));}return;}
+ $('#minimap').dataset.mapKey=mapKey;
  $('#minimap').setAttribute('viewBox',`0 0 ${w*scale+20} ${d*scale+20}`);
- $('#minimap').innerHTML=`<rect x="2" y="2" width="${w*scale+16}" height="${d*scale+16}" rx="5" fill="#172a25" stroke="#b79b63"/>${map.groups.map(g=>`<g role="button" tabindex="0" data-group="${esc(g.id)}" aria-label="Go to ${esc(atlas.groupById.get(g.id)?.label)}"><title>${esc(atlas.groupById.get(g.id)?.label)}</title><circle cx="${x(g.x)}" cy="${z(g.z)}" r="${g.id===currentGroup?3.2:2.2}" fill="${g.id===currentGroup?'#ffe2a6':'#8b9e87'}"/></g>`).join('')}${map.player?`<circle cx="${x(map.player.x)}" cy="${z(map.player.z)}" r="3.2" fill="#fff" stroke="#c69d50" stroke-width="1.2"/>`:''}`;
+ $('#minimap').innerHTML=`<rect x="2" y="2" width="${w*scale+16}" height="${d*scale+16}" rx="5" fill="#172a25" stroke="#b79b63"/>${map.groups.map(g=>`<g role="button" tabindex="0" data-group="${esc(g.id)}" aria-label="Go to ${esc(atlas.groupById.get(g.id)?.label)}"><title>${esc(atlas.groupById.get(g.id)?.label)}</title><circle cx="${x(g.x)}" cy="${z(g.z)}" r="${g.id===currentGroup?3.2:2.2}" fill="${g.id===currentGroup?'#ffe2a6':'#8b9e87'}"/></g>`).join('')}${map.player?`<circle data-player cx="${x(map.player.x)}" cy="${z(map.player.z)}" r="3.2" fill="#fff" stroke="#c69d50" stroke-width="1.2"/>`:''}`;
 }
 function restoreHash(){if(!atlas||hashGuard)return;hashGuard=true;try{const p=new URLSearchParams(location.hash.slice(1));if(p.get('book')&&atlas.bookById.has(p.get('book'))){const b=atlas.bookById.get(p.get('book'));syncFloor(b.floor,b.groupId);world?.focusBook(b.uid);showBook(b);}else if(p.get('group')&&atlas.groupById.has(p.get('group')))focusGroup(p.get('group'));else if(p.has('floor')&&FLOORS[Number(p.get('floor'))])enterFloor(Number(p.get('floor')));else buildingView();}finally{hashGuard=false;}}
 
 document.addEventListener('click',e=>{
  const b=e.target.closest('button,[data-group]');if(!b)return;if(b.hasAttribute('data-close')){b.closest('dialog')?.close();return;}if(!atlas)return;
  if(b.dataset.floor!==undefined)enterFloor(Number(b.dataset.floor));else if(b.dataset.group)focusGroup(b.dataset.group);else if(b.dataset.book)showBook(atlas.bookById.get(b.dataset.book));else if(b.dataset.travel)travelBook(b.dataset.travel);else if(b.dataset.save)toggleDesk(b.dataset.save);
- else if(b.dataset.deskMove){const next=[...desk],i=next.indexOf(b.dataset.deskMove),j=i+Number(b.dataset.direction);if(i>=0&&j>=0&&j<next.length){[next[i],next[j]]=[next[j],next[i]];if(persistDesk(next))drawDesk();}}
+ else if(b.dataset.deskMove){const next=[...desk],known=next.filter(uid=>atlas.bookById.has(uid)),i=known.indexOf(b.dataset.deskMove),j=i+Number(b.dataset.direction);if(i>=0&&j>=0&&j<known.length){const a=next.indexOf(known[i]),c=next.indexOf(known[j]);[next[a],next[c]]=[next[c],next[a]];if(persistDesk(next))drawDesk();}}
  else if(b.dataset.walk){if(overview)enterFloor(currentFloor);world?.walk(b.dataset.walk);}
 });
 $('#minimap').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.dataset.group){e.preventDefault();focusGroup(e.target.dataset.group);}});
@@ -113,30 +132,30 @@ $('#overview').addEventListener('click',buildingView);$('#enter').addEventListen
 $('#collections').addEventListener('change',()=>{currentCollection=$('#collections').value;currentGroup=null;$('#group-query').value='';drawGroups();const g=atlas.groups.find(g=>g.collection===currentCollection);if(g)focusGroup(g.id);});
 $('#group-query').addEventListener('input',drawGroups);$('#global-search').addEventListener('click',()=>openSearch());$('#browse').addEventListener('click',()=>openSearch(currentCollection,currentGroup||''));
 $('#global-query').addEventListener('input',()=>drawSearch());$('#search-collection').addEventListener('change',()=>{updateSearchGroups();drawSearch();});['group','country','kind','period'].forEach(f=>$(`#search-${f}`).addEventListener('change',()=>drawSearch()));$('#search-more').addEventListener('click',()=>{resultLimit+=40;drawSearch(false);});
-$('#map-open').addEventListener('click',()=>{if(!atlas)return;drawMapDirectory();openDialog('#map-dialog');$('#map-query').focus();});$('#map-query').addEventListener('input',drawMapDirectory);
+$('#map-open').addEventListener('click',openMap);$('#map-query').addEventListener('input',drawMapDirectory);$('#map-dialog').addEventListener('close',()=>{if(!$('#map-dialog').open)globe?.hide?.();});
 $('#desk-open').addEventListener('click',()=>{if(!atlas)return;drawDesk();openDialog('#desk-dialog');});$('#lift-open').addEventListener('click',()=>openDialog('#lift-dialog'));$('#help-open').addEventListener('click',()=>openDialog('#help-dialog'));
 $('#directory-toggle').addEventListener('click',()=>{const open=document.body.classList.toggle('directory-open');$('#directory-toggle').setAttribute('aria-expanded',String(open));});
 $('#lighting').addEventListener('change',()=>world?.setLighting($('#lighting').value));$('#quality').addEventListener('change',()=>world?.setQuality($('#quality').value));
 $('#save-book').addEventListener('click',()=>selectedBook&&toggleDesk(selectedBook.uid));$('#route-book').addEventListener('click',()=>selectedBook&&travelBook(selectedBook.uid,true));$('#travel-book').addEventListener('click',()=>selectedBook&&travelBook(selectedBook.uid));
-$('#cancel-route').addEventListener('click',()=>{world?.clearRoute?.();world?.setHighlights([]);$('#route-status').textContent='';$('#cancel-route').hidden=true;});
+$('#cancel-route').addEventListener('click',()=>{pendingRoute=null;world?.clearRoute?.();world?.setHighlights([]);$('#route-status').textContent='';$('#cancel-route').hidden=true;});
 for(const [id,delta]of[['#rotate-left',-.35],['#rotate-right',.35]])$(id).addEventListener('click',()=>{selectedAngle+=delta;world?.inspectBook?.(selectedBook?.uid,selectedAngle);$('#detail-cover').style.transform=`perspective(600px) rotateY(${Math.sin(selectedAngle)*28}deg)`;});
 $('#read-book').addEventListener('change',()=>{if(!selectedBook)return;const r=setProgress(selectedBook,$('#read-book').checked);if(!r.ok)notify(r.error||'Open the original Atlas to update this entry.');drawProgress(selectedBook);});
 $('#author-guide').addEventListener('change',e=>{if(e.target.dataset.task===undefined||!selectedBook)return;const task=(selectedBook.guide||selectedBook.authorGuide)?.books[Number(e.target.dataset.task)],r=setTaskProgress(selectedBook,task,e.target.checked);if(!r.ok){e.target.checked=getTaskProgress(selectedBook,task).done===true;notify(r.error||'Reading progress could not be saved.');}drawProgress(selectedBook);});
 $('#detail').addEventListener('close',()=>{if($('#detail').open)return;detailGeneration++;world?.releaseBook?.();});
 window.addEventListener('hashchange',restoreHash);window.addEventListener('storage',()=>{desk=loadDesk();if(atlas&&$('#desk-dialog').open)drawDesk();if(selectedBook&&$('#detail').open)drawProgress(selectedBook);});
-window.addEventListener('pagehide',()=>{clearInterval(mapTimer);world?.dispose();});
+window.addEventListener('pagehide',e=>{if(e.persisted)return;clearInterval(mapTimer);world?.dispose();globe?.dispose();});
 
 async function start(){
  try{
   atlas=await buildAtlas(await loadCatalogue());atlas.books.forEach(b=>searchIndex.set(b.uid,`${searchText(b)} ${(b.guide?.books||[]).map(t=>t.title).join(' ')}`.toLocaleLowerCase()));
   if(atlas.report.classifiedTotal!==atlas.report.sourceTotal||atlas.report.duplicateUIDs.length||atlas.report.duplicateSlots?.length)throw Error('Catalogue integrity check failed. Please use the original Atlas.');
   drawFloors();drawCollections();drawGroups();prepareSearch();drawMapDirectory();drawLocation();
- }catch(error){$('#load').hidden=true;$('#failure').hidden=false;$('#failure').textContent=`Unable to open the catalogue. ${error.message}`;return;}
+ }catch(error){$('#load').hidden=true;$('#failure').hidden=false;$('#failure').innerHTML=`Unable to open the catalogue. ${esc(error.message)} <a href="../index.html">Open the original Atlas ↗</a>`;return;}
  try{
   world=await createLibraryWorld({canvas:$('#scene'),atlas,resolveCover,onBookSelect:showBook,onGroupSelect:focusGroup,
-   onFloorChange:(index,options)=>{syncFloor(index);if(!options?.viaStairs&&!options?.guided)world?.enterFloor(index);setHash({floor:index});},
+   onFloorChange:(index,options)=>{syncFloor(index);if(!options?.viaStairs&&!options?.guided)world?.enterFloor(index);setHash({floor:index});if(pendingRoute)queueMicrotask(resumeRoute);},
    onLocationChange:({floor,groupId})=>{if(floor!==currentFloor)syncFloor(floor,groupId);else if(groupId!==currentGroup){currentGroup=groupId||null;const g=atlas.groupById.get(groupId);if(g&&g.collection!==currentCollection){currentCollection=g.collection;drawCollections();}drawGroups();drawLocation();}},
-   onOverview:()=>{overview=true;drawFloors();drawLocation();},onMapSelect:()=>{drawMapDirectory();openDialog('#map-dialog');},onDesk:()=>{drawDesk();openDialog('#desk-dialog');},onLift:()=>openDialog('#lift-dialog'),onHover:text=>{$('#hover-hint').textContent=text||'';}
+   onOverview:()=>{overview=true;drawFloors();drawLocation();},onMapSelect:openMap,onDesk:()=>{drawDesk();openDialog('#desk-dialog');},onLift:()=>openDialog('#lift-dialog'),onHover:text=>{$('#hover-hint').textContent=text||'';}
   });mapTimer=setInterval(drawMinimap,500);
  }catch(error){console.error('3D renderer unavailable',error);$('#failure').hidden=false;$('#failure').textContent='The 3D view is unavailable. Every book remains accessible through the directory, search and reading desk.';document.body.classList.add('no-webgl');$('#quality').disabled=true;$('#lighting').disabled=true;}
  $('#load').hidden=true;restoreHash();notify(`${atlas.report.classifiedTotal.toLocaleString()} entries · ${atlas.groups.length} sections · all six floors ready.`);
