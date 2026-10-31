@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "delivery": "Commit-pinned external GLB, cached in memory across floors. Original procedural figures remain visible if loading fails.",
+  "assets": [
+    {
+      "id": "kenney-library-visitor",
+      "name": "Animated library visitors",
+      "creator": "Kenney",
+      "source": "https://github.com/KenneyNL/Starter-Kit-3D-Platformer/blob/3fa8a04b1c01ab23db43123d4ce814a34c3fc7f0/models/character.glb",
+      "license": "CC0 1.0 (3D assets; repository code is MIT)",
+      "licenseSource": "https://github.com/KenneyNL/Starter-Kit-3D-Platformer/blob/3fa8a04b1c01ab23db43123d4ce814a34c3fc7f0/README.md",
+      "file": "https://cdn.jsdelivr.net/gh/KenneyNL/Starter-Kit-3D-Platformer@3fa8a04b1c01ab23db43123d4ce814a34c3fc7f0/models/character.glb",
+      "bytes": 87624,
+      "modifications": "Runtime scale, placement and selection of idle animation; no real person depicted."
+    },
+    {
+      "id": "kenney-desk",
+      "name": "Writing desk",
+      "creator": "Kenney",
+      "source": "https://kenney.nl/assets/furniture-kit",
+      "license": "CC0 1.0",
+      "licenseSource": "https://github.com/yadneshSalvi/hearth-webmcp/blob/617d6073a557cbc2f0f2ac917916e01b9c4b631b/public/assets/CREDITS.md",
+      "file": "https://cdn.jsdelivr.net/gh/yadneshSalvi/hearth-webmcp@617d6073a557cbc2f0f2ac917916e01b9c4b631b/public/assets/glb/desk-aalto.glb",
+      "mirror": "https://github.com/yadneshSalvi/hearth-webmcp/blob/617d6073a557cbc2f0f2ac917916e01b9c4b631b/public/assets/glb/desk-aalto.glb",
+      "bytes": 6588,
+      "modifications": "Runtime scale and placement. Original Kenney desk from Furniture Kit, mirrored by Hearth with per-file credits."
+    },
+    {
+      "id": "kenney-chairDesk",
+      "name": "Desk chair",
+      "creator": "Kenney",
+      "source": "https://kenney.nl/assets/furniture-kit",
+      "license": "CC0 1.0",
+      "licenseSource": "https://github.com/yadneshSalvi/hearth-webmcp/blob/617d6073a557cbc2f0f2ac917916e01b9c4b631b/public/assets/CREDITS.md",
+      "file": "https://cdn.jsdelivr.net/gh/yadneshSalvi/hearth-webmcp@617d6073a557cbc2f0f2ac917916e01b9c4b631b/public/assets/glb/chair-olve.glb",
+      "mirror": "https://github.com/yadneshSalvi/hearth-webmcp/blob/617d6073a557cbc2f0f2ac917916e01b9c4b631b/public/assets/glb/chair-olve.glb",
+      "bytes": 11064,
+      "modifications": "Runtime scale and placement. Original Kenney chairDesk from Furniture Kit, mirrored by Hearth with per-file credits."
+    },
+    {
+      "id": "kenney-lampRoundFloor",
+      "name": "Floor lamp",
+      "creator": "Kenney",
+      "source": "https://kenney.nl/assets/furniture-kit",
+      "license": "CC0 1.0",
+      "licenseSource": "https://github.com/yadneshSalvi/hearth-webmcp/blob/617d6073a557cbc2f0f2ac917916e01b9c4b631b/public/assets/CREDITS.md",
+      "file": "https://cdn.jsdelivr.net/gh/yadneshSalvi/hearth-webmcp@617d6073a557cbc2f0f2ac917916e01b9c4b631b/public/assets/glb/floor-lamp-arc.glb",
+      "mirror": "https://github.com/yadneshSalvi/hearth-webmcp/blob/617d6073a557cbc2f0f2ac917916e01b9c4b631b/public/assets/glb/floor-lamp-arc.glb",
+      "bytes": 4068,
+      "modifications": "Runtime scale and placement. Original Kenney lampRoundFloor from Furniture Kit, mirrored by Hearth with per-file credits."
+    }
+  ]
+}
