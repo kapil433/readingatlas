@@ -11,9 +11,11 @@ export async function createLibraryWorld({canvas,floors,names,getShelfEntries,re
   const h=7.6, rooms=[],gen=Array(floors.length).fill(0),texLoader=new T.TextureLoader();
   texLoader.setCrossOrigin('anonymous');
   scene.add(new T.HemisphereLight(0xfaf1d8,0x3c453a,2.2));
+  // Gentle ambient fill keeps downward-facing ceiling surfaces readable indoors.
+  scene.add(new T.AmbientLight(0xffe5c2,.65));
   const sun=new T.DirectionalLight(0xffdfad,2.1); sun.position.set(17,55,24);scene.add(sun);
   const material=(color,roughness=1)=>new T.MeshStandardMaterial({color,roughness});
-  const walnut=material(0x59412d), darkWood=material(0x342820), paleStone=material(0xa69a80), brass=material(0xb89e67,.45), paper=material(0xe2d6bc), glass=new T.MeshStandardMaterial({color:0x86aca9,transparent:true,opacity:.20,roughness:.25});
+  const walnut=material(0x59412d), darkWood=material(0x342820), paleStone=material(0xa69a80), ceilingMaterial=material(0xc5b69d), lampMaterial=new T.MeshStandardMaterial({color:0xffe2b2,emissive:0xe6ac62,emissiveIntensity:.5}), brass=material(0xb89e67,.45), paper=material(0xe2d6bc), glass=new T.MeshStandardMaterial({color:0x86aca9,transparent:true,opacity:.20,roughness:.25});
   const sharedBookGeo=new T.BoxGeometry(1.02,1.25,.18),sharedFaceGeo=new T.PlaneGeometry(.985,1.22);
   function box(parent,w,height,d,x,y,z,mat){const m=new T.Mesh(new T.BoxGeometry(w,height,d),mat);m.position.set(x,y,z);parent.add(m);return m;}
   function label(text,sub='',bg='#233b31',w=1024,height=256){const c=document.createElement('canvas');c.width=w;c.height=height;const x=c.getContext('2d');x.fillStyle=bg;x.fillRect(0,0,w,height);x.strokeStyle='#ceb786';x.lineWidth=4;x.strokeRect(8,8,w-16,height-16);x.fillStyle='#f2e8d4';x.textAlign='center';x.font=`${Math.round(height*.29)}px Georgia`;x.fillText(text,w/2,height*.48,w*.91);if(sub){x.fillStyle='#dcc69a';x.font=`600 ${Math.round(height*.12)}px sans-serif`;x.fillText(sub.toUpperCase(),w/2,height*.72,w*.9)}const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;return t;}
@@ -31,8 +33,11 @@ export async function createLibraryWorld({canvas,floors,names,getShelfEntries,re
     // Leave a stairwell opening through each storey so the stair flights actually connect the stacked levels.
     function splitSlab(y,depth,mat){box(room,19.7,depth,19.5,-1.65,y,0,mat);box(room,.8,depth,19.5,11.1,y,0,mat);box(room,2.5,depth,7.75,9.45,y,-5.875,mat);box(room,2.5,depth,4.05,9.45,y,7.725,mat)}
     if(i===0)box(room,23,.4,19.5,0,0,0,paleStone);else splitSlab(0,.4,paleStone);
-    if(i===floors.length-1)box(room,23,.28,19.5,0,7.25,0,walnut);else splitSlab(7.25,.28,walnut);
+    if(i===floors.length-1)box(room,23,.28,19.5,0,7.25,0,ceilingMaterial);else splitSlab(7.25,.28,ceilingMaterial);
     box(room,22.7,7,.38,0,3.6,-9.5,wall);box(room,.38,7,19.5,-11.3,3.6,0,wall);box(room,.38,7,19.5,11.3,3.6,0,wall);
+    // Ceiling beams and pendant fixtures make the upper interior legible as architecture.
+    for(const z of [-5,0,5])box(room,20.2,.18,.22,-1.3,7.03,z,walnut);
+    for(const x of [-5,4])for(const z of [-4,4]){box(room,.08,.42,.08,x,6.82,z,brass);box(room,.95,.13,.95,x,6.57,z,lampMaterial)}
     box(room,10,.08,9,0,.23,3.4,rug);
     for(const x of [-10.8,0,10.8])box(room,.48,7,.48,x,3.65,9.2,paleStone);
     box(room,22,.25,.5,0,7.05,9.2,walnut);
@@ -87,7 +92,7 @@ export async function createLibraryWorld({canvas,floors,names,getShelfEntries,re
   let current=0,isOverview=true,yaw=0,pitch=0,stair=null,position=new T.Vector3(0,1.72,7.9),targetCamera=new T.Vector3(37,27,43),lookAt=new T.Vector3(0,h*floors.length*.49,0),dragging=false,moved=false,lastX=0,lastY=0,orbitAngle=.68;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches,raycaster=new T.Raycaster(),pointer=new T.Vector2(),keys=new Set();let raf=0,disposed=false;
   function updateFloor(index){if(index<0||index>=rooms.length)return;const stamp=++gen[index],r=rooms[index];for(const slot of r.slots){const books=getShelfEntries(index,slot.key)||[];slot.display.forEach(({book,face,body},n)=>{const b=books[n];book.visible=!!b;const action=b?()=>onBookSelect?.(b,slot.key):null;face.userData.action=body.userData.action=action;if(!b)return;setMap(face,bookFallback(b));if(index!==current||isOverview||!resolveCover)return;Promise.resolve(resolveCover(b,slot.key)).then(value=>{if(!value||stamp!==gen[index]||disposed)return;const url=typeof value==='object'?value.url:(typeof value==='number'||/^\d+$/.test(String(value))?`https://covers.openlibrary.org/b/id/${value}-M.jpg?default=false`:value);if(!url)return;texLoader.load(url,tex=>{if(stamp!==gen[index]||disposed){tex.dispose();return}tex.colorSpace=T.SRGBColorSpace;setMap(face,tex)},undefined,()=>{})}).catch(()=>{});});}}
-  function enterFloor(index){if(index<0||index>=rooms.length)return;current=index;isOverview=false;stair=null;yaw=0;pitch=.04;position.set(0,index*h+1.72,8);targetCamera.copy(position);updateFloor(index);canvas.style.cursor='grab'}
+  function enterFloor(index){if(index<0||index>=rooms.length)return;current=index;isOverview=false;stair=null;yaw=0;pitch=.04;position.set(0,index*h+1.72,8);targetCamera.copy(position);camera.position.copy(position);camera.lookAt(position.x,position.y+.04,position.z-1);updateFloor(index);canvas.style.cursor='grab'}
   function overview(){isOverview=true;targetCamera.set(37,27,43);lookAt.set(0,h*floors.length*.49,0);orbitAngle=.68;canvas.style.cursor='grab'}
   function focusSection(key){if(isOverview)enterFloor(current);const p=rooms[current].sectionPositions[key];if(!p)return;stair=null;position.set(T.MathUtils.clamp(p.x,-8,8),current*h+1.72,Math.max(-4.4,p.z+2.0));yaw=0;pitch=.15;targetCamera.copy(position)}
   function hit(event){
