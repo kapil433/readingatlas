@@ -13,6 +13,12 @@ function source() {
  return characterPromise;
 }
 
+// Call only after all gallery instances have been disposed. Pending loads are also reclaimed.
+export function disposeGalleryAssetCache(){
+ const pending=[characterPromise,...furniturePromises.values()].filter(Boolean);characterPromise=null;furniturePromises.clear();loadedRoles.clear();
+ for(const promise of pending)promise.then(gltf=>{const geometries=new Set(),materials=new Set(),textures=new Set();gltf.scene.traverse(n=>{if(n.geometry)geometries.add(n.geometry);for(const m of(Array.isArray(n.material)?n.material:n.material?[n.material]:[])){materials.add(m);for(const v of Object.values(m))if(v?.isTexture)textures.add(v);}});geometries.forEach(x=>x.dispose());materials.forEach(x=>x.dispose());textures.forEach(x=>{x.dispose();x.source?.data?.close?.();});}).catch(()=>{});
+}
+
 export function loadGalleryAssets({ THREE:T, parent, floor=0, hostPlaceholder, readerPlaceholder, furniturePlaceholder, onLibrarian }) {
  const figures = new T.Group(); figures.name='Licensed gallery figures'; parent.add(figures);
  const mixers=[]; let disposed=false, elapsed=0;
