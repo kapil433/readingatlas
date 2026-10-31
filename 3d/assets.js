@@ -7,9 +7,14 @@ let characterPromise;
 const FURNITURE_BASE='https://cdn.jsdelivr.net/gh/yadneshSalvi/hearth-webmcp@617d6073a557cbc2f0f2ac917916e01b9c4b631b/public/assets/glb/';
 const furniturePromises=new Map(),loadedRoles=new Set();
 function markLoaded(role){loadedRoles.add(role);const canvas=document.querySelector('#scene');if(canvas)canvas.dataset.loadedAssets=[...loadedRoles].join(' ');}
-function furniture(file){if(!furniturePromises.has(file))furniturePromises.set(file,new GLTFLoader().loadAsync(FURNITURE_BASE+file));return furniturePromises.get(file);}
+async function loadModel(url){
+ const raw=url.replace('https://cdn.jsdelivr.net/gh/','https://raw.githubusercontent.com/').replace('@','/');let failure;
+ for(const source of [url,raw]){try{const response=await fetch(source,{signal:AbortSignal.timeout(15000)});if(!response.ok)throw Error(`Model request ${response.status}`);return await new GLTFLoader().parseAsync(await response.arrayBuffer(),source.slice(0,source.lastIndexOf('/')+1));}catch(error){failure=error;}}
+ throw failure;
+}
+function furniture(file){if(!furniturePromises.has(file))furniturePromises.set(file,loadModel(FURNITURE_BASE+file));return furniturePromises.get(file);}
 function source() {
- if (!characterPromise) characterPromise = new GLTFLoader().loadAsync(CHARACTER);
+ if (!characterPromise) characterPromise = loadModel(CHARACTER);
  return characterPromise;
 }
 
@@ -50,6 +55,6 @@ export function loadGalleryAssets({ THREE:T, parent, floor=0, hostPlaceholder, r
   const specs=[{x:16,z:6,height:1.18,role:'writing-desk'},{x:16,z:7.5,height:1.45,role:'desk-chair'},{x:19.6,z:8.7,height:2.4,role:'floor-lamp'}];
   models.forEach((gltf,i)=>{const s=specs[i],model=clone(gltf.scene),b=new T.Box3().setFromObject(model),size=b.getSize(new T.Vector3()),center=b.getCenter(new T.Vector3()),scale=s.height/Math.max(size.y,.01);model.scale.setScalar(scale);model.position.set(s.x-center.x*scale,.22-b.min.y*scale,s.z-center.z*scale);model.name='Kenney '+s.role;model.userData.assetRole=s.role;model.traverse(n=>{if(n.isMesh)n.material=Array.isArray(n.material)?n.material.map(m=>m.clone()):n.material.clone();});figures.add(model);markLoaded(s.role);});
   furniturePlaceholder.visible=false;return true;
- }).catch(()=>false);
+ }).catch(error=>{const canvas=document.querySelector('#scene');if(canvas)canvas.dataset.furnitureError=String(error.message||error);return false;});
  return {ready,furnitureReady,group:figures,update(delta=0,motion=true){if(disposed||!motion)return;elapsed+=Math.min(Math.max(delta,0),.05);for(const mixer of mixers)mixer.update(Math.min(Math.max(delta,0),.05));},dispose(){disposed=true;for(const mixer of mixers){mixer.stopAllAction();mixer.uncacheRoot(mixer.getRoot());}figures.traverse(n=>{if(n.isMesh){for(const m of(Array.isArray(n.material)?n.material:[n.material]))m.dispose();}});figures.removeFromParent();}};
 }
