@@ -4,13 +4,16 @@ export const EXPECTED_COUNTS={world:300,india:125,nonfiction:277,science:50,nove
 
 /** Parse an embedded JSON literal without evaluating a script from the source page. */
 export function extractJson(source,marker){let start=source.indexOf(marker);if(start<0)throw Error('Missing catalogue data: '+marker);start+=marker.length;while(/\s/.test(source[start]))start++;let depth=0,quoted=false,escape=false;for(let i=start;i<source.length;i++){const c=source[i];if(quoted){if(escape)escape=false;else if(c==='\\')escape=true;else if(c==='"')quoted=false}else if(c==='"')quoted=true;else if(c==='{'||c==='[')depth++;else if(c==='}'||c===']'){if(--depth===0)return JSON.parse(source.slice(start,i+1));}}throw Error('Incomplete catalogue data: '+marker)}
-const scriptData=(source,id)=>{const doc=new DOMParser().parseFromString(source,'text/html'),el=doc.getElementById(id);if(!el)throw Error('Missing data element: '+id);return JSON.parse(el.textContent)};
+const scriptData=(source,id)=>{if(typeof DOMParser!=='undefined'){const doc=new DOMParser().parseFromString(source,'text/html'),el=doc.getElementById(id);if(!el)throw Error('Missing data element: '+id);return JSON.parse(el.textContent)}const escaped=id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');const pattern=new RegExp('<script\\b(?=[^>]*\\bid=[\"\\x27]'+escaped+'[\"\\x27])[^>]*>([\\s\\S]*?)<\\/script\\s*>','i');const match=source.match(pattern);if(!match)throw Error('Missing data element: '+id);return JSON.parse(match[1])};
 const clean=v=>typeof v==='string'?v.trim():v==null?'':String(v);
 const keyText=v=>clean(v).normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'');
 function record(collection,raw,index,group=null,guide=null){const source={...raw};const title=clean(raw.title),author=clean(raw.author);return {id:clean(raw.id)||`${collection}:${index}`,collection,title,author,year:raw.year??raw.publication??raw.era??'',note:clean(raw.note||raw.why||raw.description||raw.detail||raw.bridge),entry:clean(raw.entry),group,guide,authorGuide:guide,source,originalHref:collection==='authors'&&guide?.id?`../index.html#authors/${encodeURIComponent(guide.id)}`:`../index.html#${collection}`}}
 export async function loadCatalogue(sourceURL='../index.html'){
  const response=await fetch(sourceURL);if(!response.ok)throw Error(`Unable to load the original Atlas (${response.status})`);
- const html=await response.text(),embedded=scriptData(html,'embedded-documents');
+ return parseCatalogueHTML(await response.text());
+}
+export function parseCatalogueHTML(html){
+ const embedded=scriptData(html,'embedded-documents');
  const world=extractJson(embedded.world,'const DATA='),india=extractJson(embedded.india,'const DATAI='),nonfiction=extractJson(embedded.nonfiction,'const ATLASN='),newData=extractJson(embedded.new,'const EMBEDDED=');
  const expanded=scriptData(embedded.expanded,'data'),guides=scriptData(embedded.expanded,'author-guides-data');
  const collections={};
