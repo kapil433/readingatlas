@@ -1,6 +1,6 @@
 /** Reading Atlas catalogue adapter: original embedded sources are the authority. */
 export const COLLECTION_NAMES={world:'World fiction',india:'India in fiction',nonfiction:'Nonfiction',science:'Science fiction',novellas:'Short novels',forgotten:'Rediscovered',contemporary:'Contemporary 2000–2026',authors:'Author reading paths',shortforms:'Essays, poems & stories'};
-export const EXPECTED_COUNTS={world:300,india:125,nonfiction:277,science:50,novellas:250,forgotten:100,contemporary:100,authors:50,shortforms:160};
+export const EXPECTED_COUNTS={world:300,india:125,nonfiction:277,science:50,novellas:250,forgotten:100,contemporary:100,authors:51,shortforms:160};
 
 /** Parse an embedded JSON literal without evaluating a script from the source page. */
 export function extractJson(source,marker){let start=source.indexOf(marker);if(start<0)throw Error('Missing catalogue data: '+marker);start+=marker.length;while(/\s/.test(source[start]))start++;let depth=0,quoted=false,escape=false;for(let i=start;i<source.length;i++){const c=source[i];if(quoted){if(escape)escape=false;else if(c==='\\')escape=true;else if(c==='"')quoted=false}else if(c==='"')quoted=true;else if(c==='{'||c==='[')depth++;else if(c==='}'||c===']'){if(--depth===0)return JSON.parse(source.slice(start,i+1));}}throw Error('Incomplete catalogue data: '+marker)}

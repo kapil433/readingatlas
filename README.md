@@ -1,6 +1,6 @@
 # The Reading Atlas
 
-A self-contained, offline-friendly literary discovery library spanning countries, centuries, genres, and ideas. Explore **1,412 entries across nine interactive collections**, with reading notes, filters, saved lists, and progress tracking.
+A self-contained, offline-friendly literary discovery library spanning countries, centuries, genres, and ideas. Explore **1,413 entries across nine interactive collections**, with reading notes, filters, saved lists, and progress tracking.
 
 **[Open the live atlas](https://kapil433.github.io/readingatlas/)** · [Download the single-file edition](https://github.com/kapil433/readingatlas/raw/refs/heads/main/index.html)
 
@@ -15,9 +15,9 @@ A self-contained, offline-friendly literary discovery library spanning countries
 | Novellas and short novels | 250 |
 | Overlooked and rediscovered older novels | 100 |
 | Contemporary books, 2000–2026 | 100 |
-| Authors worth reading deeply, with suggested reading paths | 50 |
+| Authors worth reading deeply, with suggested reading paths | 51 |
 | Essays, poems, and short stories | 160 |
-| **Total** | **1,412** |
+| **Total** | **1,413** |
 
 The contemporary shelf includes **50 highlights from 2000–2023** and **50 recent picks from 2024–2026**: 17 from 2024, 18 from 2025, and 15 from 2026. It spans prize recognition, critics’ favourites, translated fiction, popular reads, memoir, and poetry.
 
@@ -37,7 +37,7 @@ All layouts, scripts, and collection data are embedded in the single HTML file. 
 - Nine responsive shelves with search and collection-specific filters for country, period, language, genre, form, or prize.
 - Chronological science fiction browsing and 250 compact novels and novellas.
 - 100 contemporary selections spanning 2000–2026, with period and reading-route filters, publication or reading-edition years, separate award dates, translator credits, and source links.
-- Fifty author paths with **328 individually checkable reading tasks** and a dedicated **Deeper reading guide** in place of the author shelf's old edition-search button.
+- Fifty-one author paths with **338 individually checkable reading tasks** and a dedicated **Deeper reading guide** in place of the author shelf's old edition-search button.
 - Five sections in every author guide: **Reading route**, **Editions & translations**, **Life & context**, **Companions**, and **Criticism**. Guides include a shorter first route, suggested sequence, edition trade-offs, historical influences, biographical starting points, supplementary material, source links, and spoiler cautions.
 - Author-card and guide checklists stay synchronized, with per-author and overall progress, incomplete-checklist filtering, and search by recommended book title.
 - Essays, poems, and stories grouped by form, country, period, or theme.
@@ -48,9 +48,9 @@ Tracking belongs to the browser and origin where the file is opened. Local files
 
 ## Using the author guides
 
-Open [50 author reading paths](https://kapil433.github.io/readingatlas/#authors), then select **Deeper reading guide** beside an author. This opens an internal guide view with section tabs, not a separate external website. **Back to authors** (or Escape) returns to the shelf. Guide tabs support arrow keys, Home, and End. Direct guide links also work, for example [Homer](https://kapil433.github.io/readingatlas/#authors/homer).
+Open [51 author reading paths](https://kapil433.github.io/readingatlas/#authors), then select **Deeper reading guide** beside an author. This opens an internal guide view with section tabs, not a separate external website. **Back to authors** (or Escape) returns to the shelf. Guide tabs support arrow keys, Home, and End. Direct guide links also work, for example [Homer](https://kapil433.github.io/readingatlas/#authors/homer).
 
-Check individual titles on either the author card or its guide. The 328 tasks include individual works, specified collections, selections, and labelled optional extensions; some overlap. They are not 328 unique books or additions to the atlas's 1,412 shelf entries. A checklist is complete when all its listed tasks, including optional extensions, are checked; the shorter first route offers a smaller starting goal.
+Check individual titles on either the author card or its guide. The 338 tasks include individual works, specified collections, selections, and labelled optional extensions; some overlap. They are not 338 unique books or additions to the atlas's 1,413 shelf entries. A checklist is complete when all its listed tasks, including optional extensions, are checked; the shorter first route offers a smaller starting goal.
 
 Previous saved paths and old **route completed** marks are retained. An old route-completion mark does **not** automatically mark the new individual books as read. Author checklist progress is separate from read marks on other shelves.
 

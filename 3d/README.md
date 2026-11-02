@@ -2,7 +2,7 @@
 
 Serve the repository root with a static HTTP server, then open `/3d/`. The original `index.html` is the catalogue authority and must remain available at `../index.html`.
 
-The library has six storeys, 115 source-grounded classification groups and 1,412 collection entries. The 50 author paths retain 328 nested reading tasks; these are not counted as additional top-level books. World Fiction uses all 50 original country/regional groups, India uses all 15 language groups, and nonfiction uses all 22 original subjects.
+The library has six storeys, 115 source-grounded classification groups and 1,413 collection entries. The 51 author paths retain 338 nested reading tasks; these are not counted as additional top-level books. World Fiction uses all 50 original country/regional groups, India uses all 15 language groups, and nonfiction uses all 22 original subjects.
 
 ## Navigation
 
